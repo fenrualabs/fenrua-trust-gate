@@ -24,6 +24,9 @@ fenrua-crypto = { path = "crates/fenrua-crypto", version = "=0.1.0-r2.0" }
 fenrua-gate = { path = "crates/fenrua-gate", version = "=0.1.0-r2.0" }
 fenrua-protocol = { path = "crates/fenrua-protocol", version = "=0.1.0-r2.0" }
 fenrua-verify = { path = "crates/fenrua-verify", version = "=0.1.0-r2.0" }
+base64ct = { version = "=1.8.3", default-features = false, features = ["alloc"] }
+ed25519-dalek = "=3.0.0"
+getrandom = "=0.4.3"
 sha2 = "=0.10.9"
 
 [workspace.lints.rust]

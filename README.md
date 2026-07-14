@@ -42,6 +42,10 @@ match the request before an allow or deny rule is assessed.
 - `local-unsigned-development` detects a changed local payload digest but does
   not authenticate a signer identity, perform a key operation, or establish
   key custody.
+- `fenrua-crypto` contains a source-only Ed25519 prerequisite that is not
+  connected to R2 profile admission, the CLI, Gate, verifier, key resolution,
+  storage, rotation, revocation, or a release artifact. It does not make
+  `ed25519-v1` available to R2 callers.
 - The input `payloadDigest` fields remain caller-declared because artifact
   bytes are outside this profile. When an optional artifact reference is used,
   it must exactly match a manifest declaration and be effective at the supplied
@@ -97,7 +101,7 @@ schema-pin record check.
 | --- | --- | --- |
 | `fenrua-protocol` | Strict parser and closed local-profile admission | No general schema engine or released schema claim. |
 | `fenrua-c14n` | Deterministic canonical JSON and domain-separated SHA-256 | Not a released canonicalisation profile. |
-| `fenrua-crypto` | Profile discovery | No signing, verification, or key operations. |
+| `fenrua-crypto` | Profile discovery and source-only Ed25519 prerequisite | No R2 signing route, key custody, lifecycle, provider, or release surface. |
 | `fenrua-gate` | Deterministic local evaluation and evidence construction | No network, durable replay, or execution adapter. |
 | `fenrua-verify` | Separate local-envelope integrity and link verifier | Does not re-evaluate policy or depend on `fenrua-gate`. |
 | `fenrua-cli` | Explicit local file adapter | No remote API, background service, or hidden configuration. |

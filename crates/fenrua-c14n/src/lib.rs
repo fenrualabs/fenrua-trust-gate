@@ -46,6 +46,7 @@ pub enum DigestDomain {
     EvidenceBundleR2Prototype,
     VerificationResultR2Prototype,
     EvaluationArtifactR2Prototype,
+    Ed25519PayloadR3Source,
 }
 
 impl DigestDomain {
@@ -59,6 +60,7 @@ impl DigestDomain {
             Self::EvidenceBundleR2Prototype => "evidence-bundle:r2-prototype",
             Self::VerificationResultR2Prototype => "verification-result:r2-prototype",
             Self::EvaluationArtifactR2Prototype => "evaluation-artifact:r2-prototype",
+            Self::Ed25519PayloadR3Source => "ed25519-payload:r3-source",
         }
     }
 }
