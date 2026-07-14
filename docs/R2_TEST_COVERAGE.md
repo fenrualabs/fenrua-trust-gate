@@ -37,6 +37,7 @@ and the exact R2 schema-pin check.
 | Unavailable controls | Replay and required-approval tests | R2 has no durable replay or approval adapter and fails closed when either is mandatory. |
 | Emitted evidence | Testkit independent verifier tests | The separate verifier recomputes local payload digests and linked decision, evidence, receipt, and expiry relationships. |
 | Admission | Parser, profile, and CLI tests | Bounded input, duplicate-key, unknown-field, unsupported-profile, non-millisecond timestamp, and oversized-file failures are covered. |
+| Generated local properties | `generated_semantic_equivalents_have_one_idempotent_canonical_document` and `generated_duplicate_key_variants_fail_closed_before_canonicalization` | Bounded generated permutations of equivalent JSON spellings produce one canonical document and digest; generated duplicate-key variants fail during parsing. |
 
 ## Explicit R2 Deferrals
 
@@ -52,11 +53,15 @@ prototype:
 | Policy distribution, cyclic policy graphs, and supersession service | Deferred | Versioned policy graph and control-plane contract. |
 | Tenant isolation | Deferred | Tenant registry, storage boundary, and cross-tenant integration tests. |
 | SDK, hosted API, and local emulator | Deferred | Stable released interface contract and developer-platform implementation. |
-| Fuzzing, property generation, cross-platform determinism, and performance limits | Deferred | Release-grade corpus, CI matrix, benchmark, and reproducibility evidence. |
+| Fuzzing, unbounded property generation, cross-platform determinism, and performance limits | Deferred | Release-grade corpus, CI matrix, benchmark, and reproducibility evidence. |
 
 `path`-like resource text is not resolved by R2 because it has no filesystem or
 execution adapter. That does not establish a future path-security guarantee;
 any adapter must define and test its own resource acquisition boundary.
+
+The generated local property tests are a bounded source-level invariant suite.
+They do not claim a fuzz engine, an unbounded property-testing framework,
+cross-platform reproduction, performance evidence, or a release-grade corpus.
 
 ## Interpretation Rules
 
