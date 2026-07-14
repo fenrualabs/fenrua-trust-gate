@@ -39,6 +39,7 @@ and the exact R2 schema-pin check.
 | Admission | Parser, profile, and CLI tests | Bounded input, duplicate-key, unknown-field, unsupported-profile, non-millisecond timestamp, and oversized-file failures are covered. |
 | Generated local properties | `generated_semantic_equivalents_have_one_idempotent_canonical_document` and `generated_duplicate_key_variants_fail_closed_before_canonicalization` | Bounded generated permutations of equivalent JSON spellings produce one canonical document and digest; generated duplicate-key variants fail during parsing. |
 | Bounded fuzzing | `bounded_json_r2` with six curated JSON seeds | On 2026-07-14, cargo-fuzz 0.13.2, libfuzzer-sys 0.4.13, and Rust 1.99.0-nightly completed 10,000 seeded AddressSanitizer iterations with no crash. It exercises strict parsing, canonical round trips, and all four direct R2 admission kinds. |
+| Vulnerability-management source control | `check-vulnerability-management.sh` | Requires the public-safe severity, intake, triage, exception, customer-notification, retrospective, and advisory policy sections plus finding and exception record fields. It does not verify a reporting endpoint, staffed operation, private case system, or release decision. |
 
 ## Explicit R2 Deferrals
 

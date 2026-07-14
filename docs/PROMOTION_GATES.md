@@ -25,8 +25,13 @@ R2 does not satisfy those release artifacts by itself.
 
 ## Still External
 
-- owner-designated security reporting endpoint and escalation contacts;
+- owner-designated security reporting endpoint, named triage lead, private
+  evidence system, and escalation contacts;
 - release-signing custody and protected release environment;
 - supported-platform evidence and reproducible artifact process;
 - private evidence vault and independent review process;
 - any hosting, tenant, control-plane, or operations decision.
+
+The public source policy at `VULNERABILITY_MANAGEMENT.md` defines the required
+record shape and release-decision boundary. It does not establish any of these
+external operational gates.
