@@ -13,7 +13,7 @@ use fenrua_c14n::{
 };
 use fenrua_protocol::{
     JsonValue, LOCAL_UNSIGNED_KEY_ID, LOCAL_UNSIGNED_PROFILE, Problem, ProblemCode, R2DocumentKind,
-    object_fields, required_field, string_value, validate_r2_document,
+    array_items, object_fields, required_field, string_value, validate_r2_document,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -154,20 +154,83 @@ fn links_match(
     let receipt_fields = object_fields(receipt)?;
     let decision_id = field_string(decision_fields, "decisionId")?;
     let bundle_id = field_string(evidence_fields, "bundleId")?;
+    let decision_scope = object_fields(required_field(decision_fields, "scope")?)?;
+    let evidence_policy = object_fields(required_field(evidence_fields, "policy")?)?;
+    let evidence_request = object_fields(required_field(evidence_fields, "request")?)?;
+    let evidence_revocation = object_fields(required_field(evidence_fields, "revocation")?)?;
     let decision_reference = object_fields(required_field(evidence_fields, "decision")?)?;
     let receipt_digest = digest_hex(required_field(receipt_fields, "bundleDigest")?)?;
     let evidence_decision_digest = digest_hex(required_field(decision_reference, "digest")?)?;
     let decision_digest = document_digest(decision)?;
+    let decision_digest_hex = decision_digest.to_hex();
+    let evidence_digest_hex = evidence_digest.to_hex();
+    let mut decision_is_listed = false;
+    for output in array_items(required_field(evidence_fields, "outputs")?)? {
+        let output = object_fields(output)?;
+        if field_string(output, "documentId")? == decision_id
+            && field_string(output, "schemaId")? == "urn:fenrua:schema:decision-v1"
+            && digest_hex(required_field(output, "digest")?)? == decision_digest_hex.as_str()
+        {
+            decision_is_listed = true;
+        }
+    }
     Ok(
         field_string(decision_fields, "evidenceBundleId")? == bundle_id
             && field_string(receipt_fields, "bundleId")? == bundle_id
             && field_string(receipt_fields, "decisionId")? == decision_id
             && field_string(decision_reference, "decisionId")? == decision_id
-            && evidence_decision_digest == decision_digest.to_hex()
-            && receipt_digest == evidence_digest.to_hex()
+            && evidence_decision_digest == decision_digest_hex.as_str()
+            && receipt_digest == evidence_digest_hex.as_str()
             && field_string(decision_fields, "issuedAt")? == checked_at
             && field_string(evidence_fields, "createdAt")? == checked_at
-            && field_string(receipt_fields, "issuedAt")? == checked_at,
+            && field_string(receipt_fields, "issuedAt")? == checked_at
+            && field_string(decision_fields, "decision")?
+                == field_string(receipt_fields, "decision")?
+            && field_string(decision_fields, "subjectId")?
+                == field_string(evidence_fields, "subject")?
+            && field_string(decision_fields, "subjectId")?
+                == field_string(receipt_fields, "subjectId")?
+            && field_string(decision_fields, "actorId")? == field_string(evidence_fields, "actor")?
+            && field_string(decision_fields, "actorId")?
+                == field_string(receipt_fields, "actorId")?
+            && field_string(decision_fields, "action")? == field_string(receipt_fields, "action")?
+            && field_string(decision_fields, "resource")?
+                == field_string(receipt_fields, "resource")?
+            && field_string(decision_fields, "policyId")?
+                == field_string(evidence_policy, "policyId")?
+            && field_string(decision_fields, "policyRevision")?
+                == field_string(evidence_policy, "revision")?
+            && digest_hex(required_field(decision_fields, "requestDigest")?)?
+                == digest_hex(required_field(evidence_request, "digest")?)?
+            && field_string(decision_scope, "tenantId")?
+                == field_string(evidence_fields, "tenantScope")?
+            && field_string(decision_scope, "environmentId")?
+                == field_string(evidence_fields, "environment")?
+            && field_string(decision_scope, "tenantId")?
+                == field_string(
+                    object_fields(required_field(evidence_policy, "scope")?)?,
+                    "tenantId",
+                )?
+            && field_string(decision_scope, "environmentId")?
+                == field_string(
+                    object_fields(required_field(evidence_policy, "scope")?)?,
+                    "environmentId",
+                )?
+            && field_string(decision_scope, "tenantId")?
+                == field_string(
+                    object_fields(required_field(evidence_revocation, "scope")?)?,
+                    "tenantId",
+                )?
+            && field_string(decision_scope, "environmentId")?
+                == field_string(
+                    object_fields(required_field(evidence_revocation, "scope")?)?,
+                    "environmentId",
+                )?
+            && field_string(decision_fields, "expiresAt")?
+                == field_string(evidence_fields, "expiresAt")?
+            && field_string(decision_fields, "expiresAt")?
+                == field_string(receipt_fields, "expiresAt")?
+            && decision_is_listed,
     )
 }
 

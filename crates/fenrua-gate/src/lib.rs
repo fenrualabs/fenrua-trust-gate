@@ -1122,6 +1122,84 @@ mod tests {
         signed_document(policy, R2DocumentKind::AuthorityPolicy)
     }
 
+    fn policy_with_unresolved_deny() -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        let Some(JsonValue::Array(rules)) = fields.get_mut("rules") else {
+            panic!("policy fixture must contain rules");
+        };
+        let Some(mut deny) = rules.first().cloned() else {
+            panic!("policy fixture must contain one rule");
+        };
+        let JsonValue::Object(deny_fields) = &mut deny else {
+            panic!("policy rule must be an object");
+        };
+        deny_fields.insert(
+            "ruleId".to_owned(),
+            JsonValue::String("urn:fenrua:rule:r2-deny-needs-evidence".to_owned()),
+        );
+        deny_fields.insert("effect".to_owned(), JsonValue::String("DENY".to_owned()));
+        deny_fields.insert(
+            "reasonCode".to_owned(),
+            JsonValue::String("DENY_EXPLICIT".to_owned()),
+        );
+        deny_fields.insert(
+            "requiredEvidence".to_owned(),
+            JsonValue::Array(vec![JsonValue::String("synthetic-evidence".to_owned())]),
+        );
+        rules.push(deny);
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
+    fn artifact_reference(digest: &str) -> JsonValue {
+        value(&format!(
+            r#"{{
+  "artifactId": "urn:fenrua:artifact:r2-build",
+  "scope": {{
+    "tenantId": "urn:fenrua:tenant:demo",
+    "environmentId": "urn:fenrua:environment:development"
+  }},
+  "revision": "1",
+  "digest": {{
+    "algorithm": "sha-256",
+    "value": "{digest}"
+  }},
+  "effectiveAt": "2026-07-14T00:00:00.000Z",
+  "evidenceRefs": [{{
+    "evidenceBundleId": "urn:fenrua:evidence-bundle:bootstrap-evidence",
+    "digest": {{
+      "algorithm": "sha-256",
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }},
+    "createdAt": "2026-07-14T00:00:00.000Z"
+  }}]
+}}"#
+        ))
+    }
+
+    fn manifest_with_artifact(digest: &str) -> R2Document {
+        let mut manifest = value(include_str!("../../../fixtures/r2/manifest.json"));
+        let JsonValue::Object(fields) = &mut manifest else {
+            panic!("manifest fixture must be an object");
+        };
+        fields.insert(
+            "artifacts".to_owned(),
+            JsonValue::Array(vec![artifact_reference(digest)]),
+        );
+        signed_document(manifest, R2DocumentKind::EntityManifest)
+    }
+
+    fn request_with_artifact(digest: &str) -> R2Document {
+        let mut request = value(include_str!("../../../fixtures/r2/request-offline.json"));
+        let JsonValue::Object(fields) = &mut request else {
+            panic!("request fixture must be an object");
+        };
+        fields.insert("artifact".to_owned(), artifact_reference(digest));
+        signed_document(request, R2DocumentKind::ToolCallRequest)
+    }
+
     fn request(replay_required: bool, valid_signature: bool) -> R2Document {
         let mut request = value(if replay_required {
             include_str!("../../../fixtures/r2/request-replay-required.json")
@@ -1196,6 +1274,28 @@ mod tests {
         }
     }
 
+    fn evaluate_input(
+        manifest: R2Document,
+        policy: R2Document,
+        request: R2Document,
+        revocations: R2Document,
+    ) -> EvaluationArtifact {
+        let input = match EvaluationInput::new(
+            manifest,
+            policy,
+            request,
+            revocations,
+            "2026-07-14T00:01:00.000Z".to_owned(),
+        ) {
+            Ok(input) => input,
+            Err(error) => panic!("fixture input must construct: {error}"),
+        };
+        match evaluate(&input) {
+            Ok(artifact) => artifact,
+            Err(error) => panic!("fixture must evaluate: {error}"),
+        }
+    }
+
     #[test]
     fn simple_allow_is_deterministic_and_contains_no_execution_field() {
         let first = evaluate_fixture("ALLOW", false, true, "1");
@@ -1221,6 +1321,34 @@ mod tests {
         let artifact = evaluate_fixture("DENY", false, true, "1");
         let rendered = format!("{:?}", artifact.value());
         assert!(rendered.contains("DENY_EXPLICIT"));
+    }
+
+    #[test]
+    fn unresolved_matching_deny_fails_closed_before_an_allow_can_win() {
+        let artifact = evaluate_input(
+            manifest(),
+            policy_with_unresolved_deny(),
+            request(false, true),
+            revocations("1"),
+        );
+        let rendered = format!("{:?}", artifact.value());
+        assert!(rendered.contains("DENY_FAIL_CLOSED"));
+    }
+
+    #[test]
+    fn request_artifact_must_match_the_manifest_declaration() {
+        let artifact = evaluate_input(
+            manifest_with_artifact(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            ),
+            policy("ALLOW"),
+            request_with_artifact(
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            ),
+            revocations("1"),
+        );
+        let rendered = format!("{:?}", artifact.value());
+        assert!(rendered.contains("DENY_INTEGRITY_MISMATCH"));
     }
 
     #[test]

@@ -38,7 +38,9 @@ execute an action.
   not authenticate a signer identity, perform a key operation, or establish
   key custody.
 - The input `payloadDigest` fields remain caller-declared because artifact
-  bytes are outside this profile.
+  bytes are outside this profile. When an optional artifact reference is used,
+  it must exactly match a manifest declaration and be effective at the supplied
+  evaluation time.
 - No network, remote schema lookup, telemetry, database, environment lookup,
   random ID source, wall-clock read, durable replay store, approval adapter,
   or execution adapter exists.

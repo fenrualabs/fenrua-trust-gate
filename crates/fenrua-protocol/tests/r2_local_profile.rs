@@ -2,6 +2,7 @@ use fenrua_protocol::{ProblemCode, R2DocumentKind, parse_r2_document};
 
 const MANIFEST: &str = include_str!("../../../fixtures/r2/manifest.json");
 const POLICY: &str = include_str!("../../../fixtures/r2/policy-allow.json");
+const REQUEST: &str = include_str!("../../../fixtures/r2/request-offline.json");
 
 fn replace_once(input: &str, from: &str, to: &str) -> String {
     assert!(input.contains(from), "fixture anchor must remain stable");
@@ -83,6 +84,38 @@ fn closed_profile_rejects_duplicate_policy_rule_id() {
     assert_rejected(
         &source,
         R2DocumentKind::AuthorityPolicy,
+        ProblemCode::SchemaValidationFailed,
+    );
+}
+
+#[test]
+fn closed_profile_rejects_v1_policy_obligations_without_r2_semantics() {
+    assert_fixture_is_admitted(POLICY, R2DocumentKind::AuthorityPolicy);
+    let source = replace_once(
+        POLICY,
+        "      \"reasonCode\": \"ALLOW_POLICY_MATCH\"\n",
+        "      \"reasonCode\": \"ALLOW_POLICY_MATCH\",\n      \"obligations\": [{\"code\": \"retain\", \"description\": \"synthetic\"}]\n",
+    );
+
+    assert_rejected(
+        &source,
+        R2DocumentKind::AuthorityPolicy,
+        ProblemCode::SchemaValidationFailed,
+    );
+}
+
+#[test]
+fn closed_profile_rejects_v1_request_policy_references_without_r2_semantics() {
+    assert_fixture_is_admitted(REQUEST, R2DocumentKind::ToolCallRequest);
+    let source = replace_once(
+        REQUEST,
+        "  \"signature\": {\n",
+        "  \"policyRefs\": [],\n  \"signature\": {\n",
+    );
+
+    assert_rejected(
+        &source,
+        R2DocumentKind::ToolCallRequest,
         ProblemCode::SchemaValidationFailed,
     );
 }
