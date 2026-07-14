@@ -269,8 +269,14 @@ fn validate_manifest(value: &JsonValue) -> Result<(), Problem> {
     }
     if let Some(value) = optional_field(object, "artifacts") {
         let items = array_bounded(value, 64)?;
+        let mut artifact_ids = BTreeSet::new();
         for item in items {
             validate_artifact(item)?;
+            let fields = object_fields(item)?;
+            let artifact_id = required_string(fields, "artifactId")?;
+            if !artifact_ids.insert(artifact_id) {
+                return Err(schema_error());
+            }
         }
     }
     if let Some(value) = optional_field(object, "dataClassification") {

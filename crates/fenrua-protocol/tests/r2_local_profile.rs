@@ -3,6 +3,27 @@ use fenrua_protocol::{ProblemCode, R2DocumentKind, parse_r2_document};
 const MANIFEST: &str = include_str!("../../../fixtures/r2/manifest.json");
 const POLICY: &str = include_str!("../../../fixtures/r2/policy-allow.json");
 const REQUEST: &str = include_str!("../../../fixtures/r2/request-offline.json");
+const ARTIFACT: &str = r#"{
+  "artifactId": "urn:fenrua:artifact:r2-build",
+  "scope": {
+    "tenantId": "urn:fenrua:tenant:demo",
+    "environmentId": "urn:fenrua:environment:development"
+  },
+  "revision": "1",
+  "digest": {
+    "algorithm": "sha-256",
+    "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "effectiveAt": "2026-07-14T00:00:00.000Z",
+  "evidenceRefs": [{
+    "evidenceBundleId": "urn:fenrua:evidence-bundle:bootstrap-evidence",
+    "digest": {
+      "algorithm": "sha-256",
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "createdAt": "2026-07-14T00:00:00.000Z"
+  }]
+}"#;
 
 fn replace_once(input: &str, from: &str, to: &str) -> String {
     assert!(input.contains(from), "fixture anchor must remain stable");
@@ -84,6 +105,22 @@ fn closed_profile_rejects_duplicate_policy_rule_id() {
     assert_rejected(
         &source,
         R2DocumentKind::AuthorityPolicy,
+        ProblemCode::SchemaValidationFailed,
+    );
+}
+
+#[test]
+fn closed_profile_rejects_duplicate_manifest_artifact_id() {
+    assert_fixture_is_admitted(MANIFEST, R2DocumentKind::EntityManifest);
+    let source = replace_once(
+        MANIFEST,
+        "  \"signature\": {\n",
+        &format!("  \"artifacts\": [{ARTIFACT}, {ARTIFACT}],\n  \"signature\": {{\n"),
+    );
+
+    assert_rejected(
+        &source,
+        R2DocumentKind::EntityManifest,
         ProblemCode::SchemaValidationFailed,
     );
 }
