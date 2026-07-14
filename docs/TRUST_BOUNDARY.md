@@ -24,4 +24,6 @@ this repository.
 The evaluator has no execution adapter. Its `ALLOW` output does not cross the
 trust boundary into an external action. The local verifier has no dependency on
 the evaluator crate and checks emitted content integrity/links only; it does not
-independently authenticate inputs or re-run policy semantics.
+independently authenticate inputs or re-run policy semantics. It does compare
+the duplicated decision, receipt, evidence, scope, policy, request-digest, and
+expiry links so an internally contradictory local envelope does not pass.

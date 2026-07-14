@@ -31,6 +31,11 @@ and key identifier. The gate recomputes their local payload digest, but that
 does not authenticate origin. Unsupported fields, profiles, document kinds, and
 future schema versions fail closed.
 
+R2 intentionally rejects the v1 request `sequence`, `challenge`, and
+`policyRefs` fields, along with policy `obligations`, because this prototype
+does not define their semantics. A known schema field is never silently
+accepted and ignored.
+
 ## Evaluation Order
 
 1. Parse bounded bytes and reject duplicate keys.
@@ -40,8 +45,9 @@ future schema versions fail closed.
    then scope, lifecycle, identity/capability, time, and revocation freshness.
 5. Deny replay-sensitive requests because no durable replay state exists.
 6. Check direct revocations before policy allow.
-7. Evaluate matching constrained rules; explicit deny overrides allow and no
-   match denies.
+7. Evaluate matching constrained rules. An assessed explicit deny overrides
+   allow; a base-matching deny whose required evidence or approval cannot be
+   evaluated fails closed before an allow can win; no match denies.
 8. Emit canonical decision, evidence bundle, receipt, and local envelope.
 9. Recompute output integrity/link relationships in the separate verifier
    before the CLI writes the output.
@@ -53,6 +59,11 @@ of the direct input documents and caller-supplied evaluation time. It creates no
 random identifier, network event, or host observation. The evidence bundle
 records direct document digests and the revocation sequence; it is not an
 append-only service or a signed public record.
+
+When a request includes an artifact reference, it must exactly equal a manifest
+artifact declaration and be effective at the supplied evaluation time. R2 still
+does not retrieve or hash artifact bytes; the accepted digest remains a local
+declared value.
 
 `fenrua receipt inspect` recomputes the receipt's local payload digest and
 reports `LOCAL_PAYLOAD_MATCH` or `INTEGRITY_MISMATCH`. That result detects a

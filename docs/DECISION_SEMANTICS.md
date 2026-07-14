@@ -18,9 +18,9 @@ inputs, it records `DENY_SIGNATURE_INVALID` when an input local payload digest
 does not match. It denies on declared owner/issuer disagreement, scope mismatch,
 inactive or expired inputs, identity/capability mismatch, stale revocations,
 mandatory replay protection, revocations, no policy match, and unavailable
-required evidence or approval.
-Explicit deny rules override allow rules. A parse ambiguity is never converted
-into allow.
+required evidence or approval. An assessed explicit deny overrides allow; a
+base-matching deny with an unavailable requirement fails closed before an allow
+can win. A parse ambiguity is never converted into allow.
 
 The evaluation instant is supplied by the caller as a UTC millisecond timestamp;
 R2 does not read a wall clock. Identical valid inputs and the same instant

@@ -9,6 +9,7 @@ description = "Deterministic test-only Trust Gate R2 fixtures"
 publish = false
 
 [dependencies]
+fenrua-c14n.workspace = true
 fenrua-gate.workspace = true
 fenrua-protocol.workspace = true
 fenrua-verify.workspace = true

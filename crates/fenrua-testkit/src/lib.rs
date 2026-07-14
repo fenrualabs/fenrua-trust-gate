@@ -63,6 +63,7 @@ impl ReplayCheckpoint for MemoryReplayCheckpoint {
 
 #[cfg(test)]
 mod tests {
+    use fenrua_c14n::{DigestDomain, canonical_document_without_top_level_member};
     use fenrua_gate::{EvaluationInput, ReplayCheckpoint, ReplayKey, ReplayState, evaluate};
     use fenrua_protocol::{JsonValue, R2DocumentKind, parse_r2_document};
     use fenrua_verify::verify_local_evaluation;
@@ -135,6 +136,27 @@ mod tests {
         value.clone()
     }
 
+    fn resign_local_unsigned(document: &mut JsonValue) {
+        let digest = match canonical_document_without_top_level_member(
+            document,
+            "signature",
+            DigestDomain::LocalUnsignedPayloadR2Prototype,
+        ) {
+            Ok(document) => document.digest(),
+            Err(error) => panic!("tampered document must canonicalize: {error}"),
+        };
+        let JsonValue::Object(fields) = document else {
+            panic!("tampered document must be an object");
+        };
+        let Some(JsonValue::Object(signature)) = fields.get_mut("signature") else {
+            panic!("tampered document must have a signature object");
+        };
+        let Some(JsonValue::Object(payload_digest)) = signature.get_mut("payloadDigest") else {
+            panic!("tampered document must have a payload digest object");
+        };
+        payload_digest.insert("value".to_owned(), JsonValue::String(digest.to_hex()));
+    }
+
     #[test]
     fn independently_verifies_gate_output_and_detects_tampering() {
         let artifact = match evaluate(&local_input(include_str!(
@@ -165,6 +187,58 @@ mod tests {
             }
         };
         assert!(!report.integrity_verified());
+    }
+
+    #[test]
+    fn verifier_rejects_a_re_digested_receipt_that_conflicts_with_the_decision() {
+        let artifact = match evaluate(&local_input(include_str!(
+            "../../../fixtures/r2/request-offline.json"
+        ))) {
+            Ok(artifact) => artifact,
+            Err(error) => panic!("R2 allow fixture must evaluate: {error}"),
+        };
+        let mut tampered = artifact.into_value();
+        let JsonValue::Object(envelope) = &mut tampered else {
+            panic!("evaluation artifact must be an object");
+        };
+        let Some(JsonValue::Object(receipt)) = envelope.get_mut("receipt") else {
+            panic!("evaluation artifact must contain a mutable receipt object");
+        };
+        receipt.insert("decision".to_owned(), JsonValue::String("DENY".to_owned()));
+        let mut receipt_value = JsonValue::Object(receipt.clone());
+        resign_local_unsigned(&mut receipt_value);
+        let JsonValue::Object(updated_receipt) = receipt_value else {
+            panic!("re-signed receipt must remain an object");
+        };
+        *receipt = updated_receipt;
+        let report = match verify_local_evaluation(&tampered) {
+            Ok(report) => report,
+            Err(error) => panic!("tampered envelope must receive a report: {error}"),
+        };
+        assert!(!report.integrity_verified());
+    }
+
+    #[test]
+    fn closed_profile_rejects_a_foreign_decision_profile() {
+        let artifact = match evaluate(&local_input(include_str!(
+            "../../../fixtures/r2/request-offline.json"
+        ))) {
+            Ok(artifact) => artifact,
+            Err(error) => panic!("R2 allow fixture must evaluate: {error}"),
+        };
+        let mut tampered = artifact.into_value();
+        let JsonValue::Object(envelope) = &mut tampered else {
+            panic!("evaluation artifact must be an object");
+        };
+        let Some(JsonValue::Object(decision)) = envelope.get_mut("decision") else {
+            panic!("evaluation artifact must contain a mutable decision object");
+        };
+        decision.insert(
+            "profileId".to_owned(),
+            JsonValue::String("urn:fenrua:compatibility-profile:foreign".to_owned()),
+        );
+        let result = verify_local_evaluation(&tampered);
+        assert!(result.is_err());
     }
 
     #[test]
