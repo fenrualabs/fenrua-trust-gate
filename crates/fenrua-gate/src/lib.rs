@@ -1242,6 +1242,35 @@ mod tests {
         }
     }
 
+    fn structurally_admitted_document(value: JsonValue, kind: R2DocumentKind) -> R2Document {
+        let bytes =
+            match canonical_document_in_domain(&value, DigestDomain::CanonicalJsonR2Prototype) {
+                Ok(document) => document.bytes().to_vec(),
+                Err(error) => panic!("fixture must serialize: {error}"),
+            };
+        match parse_r2_document(&bytes, kind) {
+            Ok(document) => document,
+            Err(error) => panic!("mutated fixture must validate structurally: {error}"),
+        }
+    }
+
+    fn mutated_document(
+        source: &str,
+        kind: R2DocumentKind,
+        field: &str,
+        changed_value: &str,
+    ) -> R2Document {
+        let mut document = value(source);
+        let JsonValue::Object(fields) = &mut document else {
+            panic!("fixture must be an object");
+        };
+        fields.insert(
+            field.to_owned(),
+            JsonValue::String(changed_value.to_owned()),
+        );
+        structurally_admitted_document(document, kind)
+    }
+
     fn manifest() -> R2Document {
         signed_document(
             value(include_str!("../../../fixtures/r2/manifest.json")),
@@ -2251,6 +2280,78 @@ mod tests {
         let artifact = evaluate_fixture("ALLOW", false, false, "1");
         let rendered = format!("{:?}", artifact.value());
         assert!(rendered.contains("DENY_SIGNATURE_INVALID"));
+    }
+
+    #[test]
+    fn altered_direct_inputs_fail_at_the_signature_boundary() {
+        let cases = [
+            (
+                "altered manifest",
+                evaluate_input(
+                    mutated_document(
+                        include_str!("../../../fixtures/r2/manifest.json"),
+                        R2DocumentKind::EntityManifest,
+                        "revision",
+                        "2",
+                    ),
+                    policy("ALLOW"),
+                    request(false, true),
+                    revocations("1"),
+                ),
+            ),
+            (
+                "altered policy",
+                evaluate_input(
+                    manifest(),
+                    mutated_document(
+                        include_str!("../../../fixtures/r2/policy-allow.json"),
+                        R2DocumentKind::AuthorityPolicy,
+                        "revision",
+                        "2",
+                    ),
+                    request(false, true),
+                    revocations("1"),
+                ),
+            ),
+            (
+                "altered request",
+                evaluate_input(
+                    manifest(),
+                    policy("ALLOW"),
+                    mutated_document(
+                        include_str!("../../../fixtures/r2/request-offline.json"),
+                        R2DocumentKind::ToolCallRequest,
+                        "nonce",
+                        "fixture_nonce_0002",
+                    ),
+                    revocations("1"),
+                ),
+            ),
+            (
+                "altered revocation set",
+                evaluate_input(
+                    manifest(),
+                    policy("ALLOW"),
+                    request(false, true),
+                    mutated_document(
+                        include_str!("../../../fixtures/r2/revocations-current.json"),
+                        R2DocumentKind::RevocationSet,
+                        "sequence",
+                        "2",
+                    ),
+                ),
+            ),
+        ];
+
+        for (case_name, artifact) in cases {
+            assert_single_decision(
+                case_name,
+                &artifact,
+                "DENY",
+                "INTEGRITY_MISMATCH",
+                "DENY_SIGNATURE_INVALID",
+            );
+        }
     }
 
     #[test]
