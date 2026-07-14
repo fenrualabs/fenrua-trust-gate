@@ -167,6 +167,35 @@ impl Scope {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct Context {
+    context_id: String,
+    audience: String,
+    bindings: Vec<(String, String)>,
+}
+
+impl Context {
+    fn from_value(value: &JsonValue) -> Result<Self, Problem> {
+        let fields = object_fields(value)?;
+        let mut binding_keys = BTreeSet::new();
+        let mut bindings = Vec::new();
+        for binding in array_items(required_field(fields, "bindings")?)? {
+            let binding = object_fields(binding)?;
+            let key = field_string(binding, "key")?.to_owned();
+            let value = field_string(binding, "value")?.to_owned();
+            if !binding_keys.insert(key.clone()) {
+                return Err(Problem::new(ProblemCode::InvalidArgument));
+            }
+            bindings.push((key, value));
+        }
+        Ok(Self {
+            context_id: field_string(fields, "contextId")?.to_owned(),
+            audience: field_string(fields, "audience")?.to_owned(),
+            bindings,
+        })
+    }
+}
+
 #[derive(Clone, Debug)]
 struct ManifestValues {
     id: String,
@@ -189,6 +218,7 @@ struct RuleValues {
     actions: BTreeSet<String>,
     resources: BTreeSet<String>,
     scope: Scope,
+    context_selector: Context,
     time_window: Option<(String, String)>,
     required_integrity: BTreeSet<String>,
     requires_evidence: bool,
@@ -219,6 +249,7 @@ struct RequestValues {
     actor_id: String,
     action: String,
     resource: String,
+    context: Context,
     issued_at: String,
     expires_at: String,
     replay_required: bool,
@@ -387,10 +418,23 @@ fn evaluate_plan(values: &EvaluationValues) -> DecisionPlan {
     let mut approvals_unavailable = false;
     let mut unresolved_deny = false;
     let mut ambiguous = false;
+    let mut audience_mismatch = false;
+    let mut context_mismatch = false;
 
     for rule in &values.policy.rules {
         if !rule_base_matches(rule, values) {
             continue;
+        }
+        match context_match(rule, &values.request) {
+            ContextMatch::Match => {}
+            ContextMatch::AudienceMismatch => {
+                audience_mismatch = true;
+                continue;
+            }
+            ContextMatch::ContextMismatch => {
+                context_mismatch = true;
+                continue;
+            }
         }
         if rule.effect == "ALLOW" && rule.reason_code != "ALLOW_POLICY_MATCH" {
             ambiguous = true;
@@ -455,6 +499,12 @@ fn evaluate_plan(values: &EvaluationValues) -> DecisionPlan {
     if integrity_missing {
         return deny("DENY_INTEGRITY_MISMATCH", "INTEGRITY_MISMATCH");
     }
+    if audience_mismatch {
+        return deny("DENY_AUDIENCE_MISMATCH", "POLICY_VIOLATION");
+    }
+    if context_mismatch {
+        return deny("DENY_CONTEXT_MISMATCH", "POLICY_VIOLATION");
+    }
     deny("DENY_NO_MATCH", "POLICY_VIOLATION")
 }
 
@@ -491,6 +541,25 @@ fn rule_base_matches(rule: &RuleValues, values: &EvaluationValues) -> bool {
         Some((not_before, not_after)) => active_at(not_before, not_after, &values.evaluation_at),
         None => true,
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ContextMatch {
+    Match,
+    AudienceMismatch,
+    ContextMismatch,
+}
+
+fn context_match(rule: &RuleValues, request: &RequestValues) -> ContextMatch {
+    if rule.context_selector.audience != request.context.audience {
+        return ContextMatch::AudienceMismatch;
+    }
+    if rule.context_selector.context_id != request.context.context_id
+        || rule.context_selector.bindings != request.context.bindings
+    {
+        return ContextMatch::ContextMismatch;
+    }
+    ContextMatch::Match
 }
 
 fn integrity_matches(rule: &RuleValues, values: &EvaluationValues) -> bool {
@@ -605,6 +674,7 @@ fn parse_rule(value: &JsonValue) -> Result<RuleValues, Problem> {
         actions: string_set(required_field(fields, "actions")?)?,
         resources: string_set(required_field(fields, "resources")?)?,
         scope: Scope::from_value(required_field(fields, "scope")?)?,
+        context_selector: Context::from_value(required_field(fields, "contextSelector")?)?,
         time_window,
         required_integrity,
         requires_evidence,
@@ -630,6 +700,7 @@ fn parse_request(document: &R2Document) -> Result<RequestValues, Problem> {
         actor_id: field_string(fields, "actorId")?.to_owned(),
         action: field_string(fields, "action")?.to_owned(),
         resource: field_string(fields, "resource")?.to_owned(),
+        context: Context::from_value(required_field(fields, "context")?)?,
         issued_at: field_string(fields, "issuedAt")?.to_owned(),
         expires_at: field_string(fields, "expiresAt")?.to_owned(),
         replay_required: bool_value(required_field(fields, "replayRequired")?)?,
@@ -796,7 +867,7 @@ fn build_evidence(
         None => JsonValue::Array(Vec::new()),
     };
     Ok(object([
-        ("schemaVersion", text("fenrua.evidence-bundle.v1")),
+        ("schemaVersion", text("fenrua.evidence-bundle.v2")),
         ("bundleId", text(bundle_id)),
         ("tenantScope", text(&values.request.scope.tenant_id)),
         ("environment", text(&values.request.scope.environment_id)),
@@ -836,7 +907,7 @@ fn build_evidence(
                 ),
                 document_reference(
                     &values.policy.id,
-                    "urn:fenrua:schema:authority-policy-v1",
+                    "urn:fenrua:schema:authority-policy-v2",
                     values.policy.digest,
                 ),
                 document_reference(
@@ -1122,6 +1193,34 @@ mod tests {
         signed_document(policy, R2DocumentKind::AuthorityPolicy)
     }
 
+    fn policy_with_context_selector(
+        context_id: &str,
+        audience: &str,
+        binding_value: &str,
+    ) -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        let Some(JsonValue::Array(rules)) = fields.get_mut("rules") else {
+            panic!("policy fixture must contain rules");
+        };
+        let Some(JsonValue::Object(rule)) = rules.first_mut() else {
+            panic!("policy fixture must contain one rule");
+        };
+        rule.insert(
+            "contextSelector".to_owned(),
+            value(&format!(
+                r#"{{
+  "contextId": "{context_id}",
+  "audience": "{audience}",
+  "bindings": [{{"key": "purpose", "value": "{binding_value}"}}]
+}}"#
+            )),
+        );
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
     fn policy_with_unresolved_deny() -> R2Document {
         let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
         let JsonValue::Object(fields) = &mut policy else {
@@ -1321,6 +1420,54 @@ mod tests {
         let artifact = evaluate_fixture("DENY", false, true, "1");
         let rendered = format!("{:?}", artifact.value());
         assert!(rendered.contains("DENY_EXPLICIT"));
+    }
+
+    #[test]
+    fn audience_mismatch_is_denied_after_the_other_rule_selectors_match() {
+        let artifact = evaluate_input(
+            manifest(),
+            policy_with_context_selector(
+                "urn:fenrua:context:r2-demo",
+                "urn:fenrua:audience:other-tool",
+                "fixture",
+            ),
+            request(false, true),
+            revocations("1"),
+        );
+        let rendered = format!("{:?}", artifact.value());
+        assert!(rendered.contains("DENY_AUDIENCE_MISMATCH"));
+    }
+
+    #[test]
+    fn context_id_mismatch_is_denied_after_the_audience_matches() {
+        let artifact = evaluate_input(
+            manifest(),
+            policy_with_context_selector(
+                "urn:fenrua:context:other",
+                "urn:fenrua:audience:r2-tool",
+                "fixture",
+            ),
+            request(false, true),
+            revocations("1"),
+        );
+        let rendered = format!("{:?}", artifact.value());
+        assert!(rendered.contains("DENY_CONTEXT_MISMATCH"));
+    }
+
+    #[test]
+    fn context_binding_mismatch_is_denied_after_the_audience_matches() {
+        let artifact = evaluate_input(
+            manifest(),
+            policy_with_context_selector(
+                "urn:fenrua:context:r2-demo",
+                "urn:fenrua:audience:r2-tool",
+                "other-purpose",
+            ),
+            request(false, true),
+            revocations("1"),
+        );
+        let rendered = format!("{:?}", artifact.value());
+        assert!(rendered.contains("DENY_CONTEXT_MISMATCH"));
     }
 
     #[test]

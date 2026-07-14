@@ -9,8 +9,8 @@ Status: active source prototype; unreleased and not publicly available
 | Prototype version | `0.1.0-r2.0` |
 | Compatibility profile | `urn:fenrua:compatibility-profile:local-unsigned-r2` |
 | Schema registry | `https://github.com/fenrualabs/fenrua-specs` |
-| Exact registry revision | `268788e18bb39d69ffed706294d2605878f04c34` |
-| Schema pin | `fenrua-specs/v0.1@268788e18bb39d69ffed706294d2605878f04c34` |
+| Exact registry revision | `3ed6e685aeacb537ef0138e5227d0ddf98cf94ff` |
+| Schema pin | `fenrua-specs/v0.2@3ed6e685aeacb537ef0138e5227d0ddf98cf94ff` |
 | Evaluation envelope | `fenrua.local-evaluation.r2-draft` |
 | Active marker | `local-unsigned-development` |
 
@@ -22,7 +22,7 @@ available or immutable. It admits only the exact closed subset described below.
 | Document | Required local role |
 | --- | --- |
 | `fenrua.entity-manifest.v1` | Active subject identity and declared capability. |
-| `fenrua.authority-policy.v1` | Active policy containing the constrained rule subset. |
+| `fenrua.authority-policy.v2` | Active policy containing the constrained rule subset and exact context selector. |
 | `fenrua.tool-call-request.v1` | Subject, actor, action, resource, context, nonce, digest, and explicit replay requirement. |
 | `fenrua.revocation-set.v1` | Scope, sequence, freshness window, and direct revocations. |
 
@@ -31,10 +31,10 @@ and key identifier. The gate recomputes their local payload digest, but that
 does not authenticate origin. Unsupported fields, profiles, document kinds, and
 future schema versions fail closed.
 
-R2 intentionally rejects the v1 request `sequence`, `challenge`, and
-`policyRefs` fields, along with policy `obligations`, because this prototype
-does not define their semantics. A known schema field is never silently
-accepted and ignored.
+R2 intentionally rejects `fenrua.authority-policy.v1` as a direct input, along
+with v1 request `sequence`, `challenge`, and `policyRefs` fields and policy
+`obligations`, because this prototype does not define their semantics. A known
+schema field is never silently accepted and ignored.
 
 ## Evaluation Order
 
@@ -45,9 +45,12 @@ accepted and ignored.
    then scope, lifecycle, identity/capability, time, and revocation freshness.
 5. Deny replay-sensitive requests because no durable replay state exists.
 6. Check direct revocations before policy allow.
-7. Evaluate matching constrained rules. An assessed explicit deny overrides
-   allow; a base-matching deny whose required evidence or approval cannot be
-   evaluated fails closed before an allow can win; no match denies.
+7. Evaluate matching constrained rules. A rule must exactly match the request
+   context identifier, audience, and ordered binding sequence after its other
+   selectors match. Audience and context substitutions deny with their specific
+   reason codes. An assessed explicit deny overrides allow; a base-matching deny
+   whose required evidence or approval cannot be evaluated fails closed before
+   an allow can win; no match denies.
 8. Emit canonical decision, evidence bundle, receipt, and local envelope.
 9. Recompute output integrity/link relationships in the separate verifier
    before the CLI writes the output.
@@ -56,9 +59,12 @@ accepted and ignored.
 
 The evaluator creates deterministic identifiers from a domain-separated digest
 of the direct input documents and caller-supplied evaluation time. It creates no
-random identifier, network event, or host observation. The evidence bundle
-records direct document digests and the revocation sequence; it is not an
-append-only service or a signed public record.
+random identifier, network event, or host observation. It emits
+`fenrua.evidence-bundle.v2` so its bounded document references can record the
+direct `fenrua.authority-policy.v2` input; the decision, receipt, and verifier
+result remain their v1 schemas. The evidence bundle records direct document
+digests and the revocation sequence; it is not an append-only service or a
+signed public record.
 
 When a request includes an artifact reference, it must exactly equal a manifest
 artifact declaration and be effective at the supplied evaluation time. R2 still

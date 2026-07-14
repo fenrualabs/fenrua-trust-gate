@@ -99,7 +99,7 @@ fn closed_profile_rejects_duplicate_policy_rule_id() {
     let source = replace_once(
         POLICY,
         "    }\n  ],\n  \"integrity\":",
-        "    },\n    {\n      \"ruleId\": \"urn:fenrua:rule:r2-allow\",\n      \"effect\": \"ALLOW\",\n      \"subjectSelector\": {\n        \"ids\": [\"urn:fenrua:entity:r2-agent\"]\n      },\n      \"actorSelector\": {\n        \"ids\": [\"urn:fenrua:actor:r2-operator\"]\n      },\n      \"actions\": [\"tool.execute\"],\n      \"resources\": [\"artifact:r2-build\"],\n      \"scope\": {\n        \"tenantId\": \"urn:fenrua:tenant:demo\",\n        \"environmentId\": \"urn:fenrua:environment:development\"\n      },\n      \"reasonCode\": \"ALLOW_POLICY_MATCH\"\n    }\n  ],\n  \"integrity\":",
+        "    },\n    {\n      \"ruleId\": \"urn:fenrua:rule:r2-allow\",\n      \"effect\": \"ALLOW\",\n      \"subjectSelector\": {\n        \"ids\": [\"urn:fenrua:entity:r2-agent\"]\n      },\n      \"actorSelector\": {\n        \"ids\": [\"urn:fenrua:actor:r2-operator\"]\n      },\n      \"actions\": [\"tool.execute\"],\n      \"resources\": [\"artifact:r2-build\"],\n      \"scope\": {\n        \"tenantId\": \"urn:fenrua:tenant:demo\",\n        \"environmentId\": \"urn:fenrua:environment:development\"\n      },\n      \"contextSelector\": {\n        \"contextId\": \"urn:fenrua:context:r2-demo\",\n        \"audience\": \"urn:fenrua:audience:r2-tool\",\n        \"bindings\": [{\"key\": \"purpose\", \"value\": \"fixture\"}]\n      },\n      \"reasonCode\": \"ALLOW_POLICY_MATCH\"\n    }\n  ],\n  \"integrity\":",
     );
 
     assert_rejected(
@@ -121,6 +121,38 @@ fn closed_profile_rejects_duplicate_manifest_artifact_id() {
     assert_rejected(
         &source,
         R2DocumentKind::EntityManifest,
+        ProblemCode::SchemaValidationFailed,
+    );
+}
+
+#[test]
+fn closed_profile_rejects_authority_policy_v1_after_the_contextual_v2_pin() {
+    assert_fixture_is_admitted(POLICY, R2DocumentKind::AuthorityPolicy);
+    let source = replace_once(
+        POLICY,
+        "fenrua.authority-policy.v2",
+        "fenrua.authority-policy.v1",
+    );
+
+    assert_rejected(
+        &source,
+        R2DocumentKind::AuthorityPolicy,
+        ProblemCode::UnsupportedSchema,
+    );
+}
+
+#[test]
+fn closed_profile_requires_an_exact_context_selector_on_each_policy_rule() {
+    assert_fixture_is_admitted(POLICY, R2DocumentKind::AuthorityPolicy);
+    let source = replace_once(
+        POLICY,
+        "      \"contextSelector\": {\n        \"contextId\": \"urn:fenrua:context:r2-demo\",\n        \"audience\": \"urn:fenrua:audience:r2-tool\",\n        \"bindings\": [\n          {\"key\": \"purpose\", \"value\": \"fixture\"}\n        ]\n      },\n",
+        "",
+    );
+
+    assert_rejected(
+        &source,
+        R2DocumentKind::AuthorityPolicy,
         ProblemCode::SchemaValidationFailed,
     );
 }

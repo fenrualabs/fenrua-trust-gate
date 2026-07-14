@@ -1,5 +1,5 @@
 //! Strict, local-only R2 prototype admission for a pinned subset of the
-//! Fenrua v0.1 schemas.
+//! Fenrua versioned schemas.
 //!
 //! This module does not implement a general JSON Schema engine. It accepts the
 //! smallest closed subset required by the R2 local-unsigned workflow and fails
@@ -11,8 +11,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::{JsonValue, ParseLimits, Problem, ProblemCode, parse_json};
 
 pub const R2_LOCAL_SPECS_REPOSITORY: &str = "https://github.com/fenrualabs/fenrua-specs";
-pub const R2_LOCAL_SPECS_COMMIT: &str = "268788e18bb39d69ffed706294d2605878f04c34";
-pub const R2_LOCAL_SCHEMA_PIN: &str = "fenrua-specs/v0.1@268788e18bb39d69ffed706294d2605878f04c34";
+pub const R2_LOCAL_SPECS_COMMIT: &str = "3ed6e685aeacb537ef0138e5227d0ddf98cf94ff";
+pub const R2_LOCAL_SCHEMA_PIN: &str = "fenrua-specs/v0.2@3ed6e685aeacb537ef0138e5227d0ddf98cf94ff";
 pub const R2_LOCAL_PROFILE_ID: &str = "urn:fenrua:compatibility-profile:local-unsigned-r2";
 pub const LOCAL_UNSIGNED_PROFILE: &str = "local-unsigned-development";
 pub const LOCAL_UNSIGNED_KEY_ID: &str = "urn:fenrua:key:local-unsigned-development";
@@ -49,11 +49,11 @@ impl R2DocumentKind {
     pub const fn schema_version(self) -> &'static str {
         match self {
             Self::EntityManifest => "fenrua.entity-manifest.v1",
-            Self::AuthorityPolicy => "fenrua.authority-policy.v1",
+            Self::AuthorityPolicy => "fenrua.authority-policy.v2",
             Self::ToolCallRequest => "fenrua.tool-call-request.v1",
             Self::RevocationSet => "fenrua.revocation-set.v1",
             Self::Decision => "fenrua.decision.v1",
-            Self::EvidenceBundle => "fenrua.evidence-bundle.v1",
+            Self::EvidenceBundle => "fenrua.evidence-bundle.v2",
             Self::Receipt => "fenrua.receipt.v1",
             Self::VerificationResult => "fenrua.verification-result.v1",
             Self::EvaluationEnvelope => R2_EVALUATION_ENVELOPE_SCHEMA,
@@ -63,11 +63,11 @@ impl R2DocumentKind {
     pub const fn schema_id(self) -> Option<&'static str> {
         match self {
             Self::EntityManifest => Some("urn:fenrua:schema:entity-manifest-v1"),
-            Self::AuthorityPolicy => Some("urn:fenrua:schema:authority-policy-v1"),
+            Self::AuthorityPolicy => Some("urn:fenrua:schema:authority-policy-v2"),
             Self::ToolCallRequest => Some("urn:fenrua:schema:tool-call-request-v1"),
             Self::RevocationSet => Some("urn:fenrua:schema:revocation-set-v1"),
             Self::Decision => Some("urn:fenrua:schema:decision-v1"),
-            Self::EvidenceBundle => Some("urn:fenrua:schema:evidence-bundle-v1"),
+            Self::EvidenceBundle => Some("urn:fenrua:schema:evidence-bundle-v2"),
             Self::Receipt => Some("urn:fenrua:schema:receipt-v1"),
             Self::VerificationResult => Some("urn:fenrua:schema:verification-result-v1"),
             Self::EvaluationEnvelope => None,
@@ -707,6 +707,7 @@ fn validate_rule(value: &JsonValue) -> Result<&str, Problem> {
             "actions",
             "resources",
             "scope",
+            "contextSelector",
             "reasonCode",
         ],
         &[
@@ -732,6 +733,7 @@ fn validate_rule(value: &JsonValue) -> Result<&str, Problem> {
         }
     }
     validate_scope(required_field(object, "scope")?)?;
+    validate_context(required_field(object, "contextSelector")?)?;
     reason_code(required_string(object, "reasonCode")?)?;
     if let Some(value) = optional_field(object, "timeWindow") {
         validate_time_window(value)?;
@@ -1323,11 +1325,13 @@ fn schema_id(value: &str) -> Result<(), Problem> {
     if !matches!(
         value,
         "urn:fenrua:schema:entity-manifest-v1"
+            | "urn:fenrua:schema:authority-policy-v2"
             | "urn:fenrua:schema:authority-policy-v1"
             | "urn:fenrua:schema:tool-call-request-v1"
             | "urn:fenrua:schema:revocation-set-v1"
             | "urn:fenrua:schema:decision-v1"
             | "urn:fenrua:schema:evidence-bundle-v1"
+            | "urn:fenrua:schema:evidence-bundle-v2"
             | "urn:fenrua:schema:receipt-v1"
             | "urn:fenrua:schema:verification-result-v1"
     ) {

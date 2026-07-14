@@ -33,7 +33,7 @@ impl SchemaDescriptor {
     }
 }
 
-const RESERVED_SCHEMAS: [SchemaDescriptor; 14] = [
+const RESERVED_SCHEMAS: [SchemaDescriptor; 16] = [
     SchemaDescriptor {
         id: "fenrua.approval.v1",
         status: SchemaStatus::ReservedUnreleased,
@@ -44,6 +44,10 @@ const RESERVED_SCHEMAS: [SchemaDescriptor; 14] = [
     },
     SchemaDescriptor {
         id: "fenrua.authority-policy.v1",
+        status: SchemaStatus::ReservedUnreleased,
+    },
+    SchemaDescriptor {
+        id: "fenrua.authority-policy.v2",
         status: SchemaStatus::ReservedUnreleased,
     },
     SchemaDescriptor {
@@ -60,6 +64,10 @@ const RESERVED_SCHEMAS: [SchemaDescriptor; 14] = [
     },
     SchemaDescriptor {
         id: "fenrua.evidence-bundle.v1",
+        status: SchemaStatus::ReservedUnreleased,
+    },
+    SchemaDescriptor {
+        id: "fenrua.evidence-bundle.v2",
         status: SchemaStatus::ReservedUnreleased,
     },
     SchemaDescriptor {

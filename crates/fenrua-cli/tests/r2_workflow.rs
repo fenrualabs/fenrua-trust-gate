@@ -141,6 +141,26 @@ fn r2_cli_workflow_writes_verifies_refuses_overwrite_and_detects_tampering() {
         panic!("local envelope must contain a decision object");
     };
     assert_eq!(string_field(decision, "decision"), "ALLOW");
+    let Some(JsonValue::Object(evidence)) = envelope_fields.get("evidenceBundle") else {
+        panic!("local envelope must contain an evidence bundle object");
+    };
+    assert_eq!(
+        string_field(evidence, "schemaVersion"),
+        "fenrua.evidence-bundle.v2"
+    );
+    let Some(JsonValue::Array(inputs)) = evidence.get("inputs") else {
+        panic!("evidence bundle must contain input references");
+    };
+    assert!(inputs.iter().any(|input| {
+        let JsonValue::Object(input) = input else {
+            return false;
+        };
+        matches!(
+            input.get("schemaId"),
+            Some(JsonValue::String(schema_id))
+                if schema_id == "urn:fenrua:schema:authority-policy-v2"
+        )
+    }));
 
     let (code, stdout, stderr) = run_cli(vec![
         "evidence".to_owned(),

@@ -6,8 +6,8 @@ This public Rust workspace is a bounded prototype of the local Fenrua Trust
 Gate decision path. It is not a product release, hosted service, SDK, API,
 security assurance statement, or proof that a Trust Gate workflow is publicly
 available. The repository accepts a closed local subset of the separately
-governed `fenrua-specs` v0.1 registry at
-`268788e18bb39d69ffed706294d2605878f04c34`.
+governed `fenrua-specs` v0.2 registry at
+`3ed6e685aeacb537ef0138e5227d0ddf98cf94ff`.
 
 ## R2 Local Path
 
@@ -22,13 +22,18 @@ It then performs bounded parsing, duplicate-key rejection, closed-profile
 structural admission, local-unsigned payload-digest checks, caller-supplied
 UTC-millisecond time checks, freshness/revocation checks, deterministic
 deny-overrides policy evaluation, and deterministic local evidence generation.
-It emits a decision, evidence bundle, and human-readable receipt in one R2
-envelope. A separate `fenrua-verify` crate recomputes that envelope's emitted
-payload digests and cross-document relationships without depending on
-`fenrua-gate`.
+It emits a `fenrua.decision.v1`, `fenrua.evidence-bundle.v2`, and
+`fenrua.receipt.v1` in one R2 envelope. A separate
+`fenrua.verification-result.v1` record is produced by `fenrua-verify`, which
+recomputes the envelope's emitted payload digests and cross-document
+relationships without depending on `fenrua-gate`.
 
 `ALLOW` is a local prototype record only. It is never an instruction to
 execute an action.
+
+Each R2 policy rule uses `fenrua.authority-policy.v2` and must carry one exact
+context selector. Its context identifier, audience, and ordered bindings must
+match the request before an allow or deny rule is assessed.
 
 ## Explicit Limitations
 

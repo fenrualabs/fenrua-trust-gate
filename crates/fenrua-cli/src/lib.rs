@@ -562,6 +562,8 @@ mod tests {
         assert!(stderr.is_empty());
         assert!(stdout.contains("\"acceptedLocalInputCount\":4"));
         assert!(stdout.contains("fenrua.entity-manifest.v1"));
+        assert!(stdout.contains("fenrua.authority-policy.v2"));
+        assert!(!stdout.contains("fenrua.authority-policy.v1"));
         assert!(!stdout.contains("fenrua.approval.v1"));
     }
 

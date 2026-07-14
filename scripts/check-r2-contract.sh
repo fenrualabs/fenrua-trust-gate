@@ -4,8 +4,8 @@ set -euo pipefail
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$repository_root"
 
-specs_commit="268788e18bb39d69ffed706294d2605878f04c34"
-schema_pin="fenrua-specs/v0.1@${specs_commit}"
+specs_commit="3ed6e685aeacb537ef0138e5227d0ddf98cf94ff"
+schema_pin="fenrua-specs/v0.2@${specs_commit}"
 
 if ! grep -Fq "R2_LOCAL_SPECS_COMMIT: &str = \"${specs_commit}\"" crates/fenrua-protocol/src/r2.rs; then
   printf '%s\n' 'R2 contract failure: protocol source does not pin the approved specs revision' >&2
