@@ -1387,10 +1387,18 @@ mod tests {
     use crate::ProblemCode;
 
     #[test]
-    fn timestamp_validation_rejects_impossible_dates() {
+    fn timestamp_validation_rejects_impossible_dates_leap_seconds_and_non_utc_forms() {
         assert!(validate_r2_timestamp("2028-02-29T12:00:00.000Z").is_ok());
         assert!(validate_r2_timestamp("2027-02-29T12:00:00.000Z").is_err());
         assert!(validate_r2_timestamp("2026-07-14T24:00:00.000Z").is_err());
+        assert!(validate_r2_timestamp("2026-10-04T02:30:00.000Z").is_ok());
+        for timestamp in ["2016-12-31T23:59:60.000Z", "2026-10-04T02:30:00.000+11:00"] {
+            let error = match validate_r2_timestamp(timestamp) {
+                Ok(()) => panic!("leap seconds and non-UTC offsets must be rejected"),
+                Err(error) => error,
+            };
+            assert_eq!(error.code(), ProblemCode::InvalidTimestamp);
+        }
     }
 
     #[test]

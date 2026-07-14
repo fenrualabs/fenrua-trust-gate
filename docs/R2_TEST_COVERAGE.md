@@ -28,6 +28,7 @@ and the exact R2 schema-pin check.
 | Context binding | Audience, context identifier, and ordered binding tests | Context substitutions deny before an allow can apply. |
 | Scope and identity | Decision boundary matrix and issuer-alignment tests | Scope, subject, owner, and issuer disagreements fail closed. |
 | Time windows | `policy_time_window_is_half_open_at_each_millisecond_boundary` | Rule windows are UTC half-open intervals: `[notBefore, notAfter)`. |
+| Timestamp admission | `direct_issued_at_boundaries_fail_closed_without_implicit_clock_skew` and protocol timestamp validation | Exact direct-input issue boundaries are accepted; one-millisecond-future inputs fail closed; leap seconds and non-UTC offsets are rejected. |
 | Direct-input expiry | `each_direct_expiry_boundary_emits_a_strict_deny_envelope` | Expired manifest, policy, request, and revocation set each emit a strict DENY envelope with the documented reason. |
 | Output expiry integrity | Expiry-boundary and calendar rollover tests | Stale DENY records use a minimal one-millisecond linked output interval; normal ALLOW records remain bounded by the earliest input expiry. |
 | Revocation | Boundary matrix and supplied sequence evidence test | Stale revocation state and direct policy, subject, artifact, and key revocations deny deterministically. |

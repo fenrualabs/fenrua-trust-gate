@@ -1271,6 +1271,20 @@ mod tests {
         structurally_admitted_document(document, kind)
     }
 
+    fn document_with_timestamp(
+        source: &str,
+        kind: R2DocumentKind,
+        field: &str,
+        timestamp: &str,
+    ) -> R2Document {
+        let mut document = value(source);
+        let JsonValue::Object(fields) = &mut document else {
+            panic!("fixture must be an object");
+        };
+        fields.insert(field.to_owned(), JsonValue::String(timestamp.to_owned()));
+        signed_document(document, kind)
+    }
+
     fn manifest() -> R2Document {
         signed_document(
             value(include_str!("../../../fixtures/r2/manifest.json")),
@@ -2102,6 +2116,127 @@ mod tests {
             "STALE",
             "DENY_STALE_REVOCATION_STATE",
         );
+    }
+
+    #[test]
+    fn direct_issued_at_boundaries_fail_closed_without_implicit_clock_skew() {
+        let evaluation_at = "2026-07-14T00:01:00.000Z";
+        let future = "2026-07-14T00:01:00.001Z";
+        let at_boundary = evaluate_input_at(
+            document_with_timestamp(
+                include_str!("../../../fixtures/r2/manifest.json"),
+                R2DocumentKind::EntityManifest,
+                "issuedAt",
+                evaluation_at,
+            ),
+            document_with_timestamp(
+                include_str!("../../../fixtures/r2/policy-allow.json"),
+                R2DocumentKind::AuthorityPolicy,
+                "issuedAt",
+                evaluation_at,
+            ),
+            document_with_timestamp(
+                include_str!("../../../fixtures/r2/request-offline.json"),
+                R2DocumentKind::ToolCallRequest,
+                "issuedAt",
+                evaluation_at,
+            ),
+            document_with_timestamp(
+                include_str!("../../../fixtures/r2/revocations-current.json"),
+                R2DocumentKind::RevocationSet,
+                "issuedAt",
+                evaluation_at,
+            ),
+            evaluation_at,
+        );
+        assert_single_decision(
+            "direct inputs at their issue boundary",
+            &at_boundary,
+            "ALLOW",
+            "PASS_WITH_LIMITATIONS",
+            "ALLOW_POLICY_MATCH",
+        );
+
+        let cases = [
+            (
+                "future manifest issuedAt",
+                evaluate_input_at(
+                    document_with_timestamp(
+                        include_str!("../../../fixtures/r2/manifest.json"),
+                        R2DocumentKind::EntityManifest,
+                        "issuedAt",
+                        future,
+                    ),
+                    policy("ALLOW"),
+                    request(false, true),
+                    revocations("1"),
+                    evaluation_at,
+                ),
+                "FAIL_CLOSED",
+                "DENY_INVALID_IDENTITY",
+            ),
+            (
+                "future policy issuedAt",
+                evaluate_input_at(
+                    manifest(),
+                    document_with_timestamp(
+                        include_str!("../../../fixtures/r2/policy-allow.json"),
+                        R2DocumentKind::AuthorityPolicy,
+                        "issuedAt",
+                        future,
+                    ),
+                    request(false, true),
+                    revocations("1"),
+                    evaluation_at,
+                ),
+                "FAIL_CLOSED",
+                "DENY_FAIL_CLOSED",
+            ),
+            (
+                "future request issuedAt",
+                evaluate_input_at(
+                    manifest(),
+                    policy("ALLOW"),
+                    document_with_timestamp(
+                        include_str!("../../../fixtures/r2/request-offline.json"),
+                        R2DocumentKind::ToolCallRequest,
+                        "issuedAt",
+                        future,
+                    ),
+                    revocations("1"),
+                    evaluation_at,
+                ),
+                "STALE",
+                "DENY_FAIL_CLOSED",
+            ),
+            (
+                "future revocation issuedAt",
+                evaluate_input_at(
+                    manifest(),
+                    policy("ALLOW"),
+                    request(false, true),
+                    document_with_timestamp(
+                        include_str!("../../../fixtures/r2/revocations-current.json"),
+                        R2DocumentKind::RevocationSet,
+                        "issuedAt",
+                        future,
+                    ),
+                    evaluation_at,
+                ),
+                "STALE",
+                "DENY_STALE_REVOCATION_STATE",
+            ),
+        ];
+
+        for (case_name, artifact, verification_state, reason_code) in cases {
+            assert_single_decision(
+                case_name,
+                &artifact,
+                "DENY",
+                verification_state,
+                reason_code,
+            );
+        }
     }
 
     #[test]
