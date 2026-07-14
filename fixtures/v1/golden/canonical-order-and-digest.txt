@@ -1,0 +1,4 @@
+profile=fenrua.c14n.r1-draft-json
+domain=canonical-json:r1-draft
+canonical={"a":"text","z":1}
+digest=sha256:aa37f2d20a68a5d9f5579d08d2e07ca74ef8fc99555fe19bd901f3fc2b02e5bb

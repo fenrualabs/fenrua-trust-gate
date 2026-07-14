@@ -1,0 +1,15 @@
+[package]
+name = "fenrua-testkit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic test-only clock and replay foundations"
+publish = false
+
+[dependencies]
+fenrua-gate.workspace = true
+
+[lints]
+workspace = true

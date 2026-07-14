@@ -1,0 +1,7 @@
+# R1 bootstrap ownership record.
+#
+# No verified GitHub team or maintainer account has been authorized for this
+# repository yet, so this file intentionally contains no active ownership rule.
+# Before protected-branch enforcement, the owner must add a verified team rule
+# and configure required CODEOWNERS review in repository settings. See
+# docs/PROMOTION_GATES.md. Do not replace this comment with a guessed account.

@@ -1,0 +1,15 @@
+[package]
+name = "fenrua-verify"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Independent R1 draft integrity verification primitive"
+
+[dependencies]
+fenrua-c14n.workspace = true
+fenrua-protocol.workspace = true
+
+[lints]
+workspace = true
