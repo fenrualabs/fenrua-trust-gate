@@ -19,10 +19,19 @@ if grep -n 'source = "git+' Cargo.lock; then
   exit 1
 fi
 
-if ! grep -Fq 'sha2 = "=0.10.9"' Cargo.toml; then
-  printf '%s\n' 'dependency policy failure: the direct sha2 pin is not exact' >&2
-  exit 1
-fi
+direct_pins=(
+  'base64ct = { version = "=1.8.3", default-features = false, features = ["alloc"] }'
+  'ed25519-dalek = "=3.0.0"'
+  'getrandom = "=0.4.3"'
+  'sha2 = "=0.10.9"'
+)
+
+for direct_pin in "${direct_pins[@]}"; do
+  if ! grep -Fqx "$direct_pin" Cargo.toml; then
+    printf 'dependency policy failure: direct dependency pin is not exact: %s\n' "$direct_pin" >&2
+    exit 1
+  fi
+done
 
 temporary_actual="$(mktemp)"
 trap 'rm -f "$temporary_actual"' EXIT

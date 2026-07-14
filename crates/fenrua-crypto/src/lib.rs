@@ -1,9 +1,13 @@
 //! Signing-profile discovery for the R1 foundation and R2 local prototype.
 //!
-//! This crate contains no signing, verification, private-key, provider, or
-//! network implementation. It makes profile names explicit so callers cannot
-//! silently substitute an unknown or downgraded profile while the real profile
-//! contracts remain unreleased.
+//! The active R2 registry contains no signing or verification capability. The
+//! isolated `ed25519_v1` module is a source-only R3 prerequisite and is not
+//! wired into the R2 CLI, Gate, verifier, profile registry, key lifecycle, or
+//! release surface. It makes profile names explicit so callers cannot silently
+//! substitute an unknown or downgraded profile while the real profile contracts
+//! remain unreleased.
+
+pub mod ed25519_v1;
 
 use fenrua_protocol::{Problem, ProblemCode};
 

@@ -1,6 +1,6 @@
 # Dependency Policy
 
-Status: active R2 source policy
+Status: active R2 source policy with a source-only Ed25519 prerequisite
 
 ## Rules
 
@@ -11,7 +11,8 @@ Status: active R2 source policy
 - Git dependencies, unchecked binary downloads, install scripts, telemetry-by-
 default dependencies, async runtimes, HTTP clients, URL resolvers, database
 clients, scripting engines, and generic error-erasure libraries are not
-admitted to the R2 local prototype.
+admitted to the R2 local prototype. The source-only Ed25519 prerequisite does
+not change that runtime boundary or enable a signing route.
 - A dependency change needs a purpose, Fenrua owner, exact version, licence,
   source, security state, update plan, and removal plan in
   `DEPENDENCY_INVENTORY.md` before the lockfile is refreshed.
@@ -25,10 +26,21 @@ admitted to the R2 local prototype.
 
 ## Current Direct Dependencies
 
-`sha2 = "=0.10.9"` is the only third-party direct dependency. It supplies an
-established SHA-256 implementation for deterministic integrity primitives. R2
-does not implement custom cryptographic algorithms and does not use `sha2` for
-signing or private-key operations.
+`sha2 = "=0.10.9"` supplies the established SHA-256 implementation for
+deterministic R2 integrity primitives. R2 does not implement custom
+cryptographic algorithms and does not use `sha2` for signing or private-key
+operations.
+
+`ed25519-dalek = "=3.0.0"` and
+`base64ct = { version = "=1.8.3", default-features = false, features = ["alloc"] }`
+support only the unintegrated `fenrua-crypto::ed25519_v1` source prerequisite:
+standard Ed25519 verification and strict unpadded Base64URL record encoding.
+They do not enable R2 CLI, Gate, verifier, provider, storage, or release
+operations.
+
+`getrandom = "=0.4.3"` is a direct dev dependency used only to create
+ephemeral process-local test material. It is not a runtime identifier source,
+key store, configuration input, or evidence artifact.
 
 The isolated, nightly-only fuzz workspace has one additional third-party direct
 dependency: `libfuzzer-sys = "=0.4.13"`. It is used only to build the bounded

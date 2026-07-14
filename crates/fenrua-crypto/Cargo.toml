@@ -5,10 +5,16 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "R2 signing-profile registry without key operations"
+description = "R2 signing registry with an unintegrated Ed25519 source prerequisite"
 
 [dependencies]
+base64ct.workspace = true
+ed25519-dalek.workspace = true
+fenrua-c14n.workspace = true
 fenrua-protocol.workspace = true
+
+[dev-dependencies]
+getrandom.workspace = true
 
 [lints]
 workspace = true
