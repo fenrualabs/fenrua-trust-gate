@@ -1,6 +1,6 @@
 # Public Repository Admission Policy
 
-Status: active R1 source-admission control
+Status: active R2 source-admission control
 
 ## Purpose
 

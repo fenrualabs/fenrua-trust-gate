@@ -1,34 +1,27 @@
-# R1 Trust Boundary
+# R2 Local Trust Boundary
 
-Status: local source-boundary record, not a deployed architecture
+Status: local source boundary; not a deployed architecture
 
-## Trusted Inputs at R1
+The CLI opens only caller-supplied explicit file paths. It passes their bytes
+through bounded parsing before any R2 structural admission. The implementation
+rejects malformed UTF-8/JSON, duplicate keys, trailing data, invalid surrogate
+use, and configured byte, depth, collection, string, number, and canonical-byte
+bounds. Error output contains a stable category and optional byte offset, never
+the path, raw content, host details, stack trace, or nested dependency message.
 
-The strict parser accepts only bytes supplied by its direct caller. It does not
-open files, resolve paths, dereference URLs, fetch schemas, evaluate scripts,
-read environment variables, obtain wall-clock time, use random identifiers, or
-call a network service.
+The local evaluator reads no environment, network, URL, remote schema, database,
+telemetry source, wall clock, random source, or dynamic code. The caller supplies
+all four documents and the evaluation timestamp. R2 has no durable replay state;
+a request that requires replay protection is denied.
 
-## Untrusted Input Handling
+The output adapter uses `create_new`, writes one canonical envelope, and calls
+`sync_all`. It refuses to overwrite an existing target. This is not a claim of
+atomic publication across directories, multiple files, or a filesystem crash
+protocol. A caller must treat the emitted envelope as local prototype data and
+apply any required storage, permission, retention, and execution controls outside
+this repository.
 
-Before any future schema interpretation, R1 rejects input that exceeds its
-configured byte, nesting, collection, decoded-string, or number-token bounds.
-It rejects malformed UTF-8, malformed JSON, raw control characters, invalid
-surrogate usage, duplicate object keys, and trailing data. A generic JSON
-deserializer is never allowed to overwrite a duplicate key silently.
-
-## Output Boundary
-
-R1 emits canonical bytes/digests only through library calls and static CLI
-discovery information. It emits a safe problem envelope with a stable category
-and optional byte offset. It does not emit authorisation, execution direction,
-evidence, receipts, keys, user data, host details, paths, stack traces, or raw
-input in an error response.
-
-## Future Boundary Conditions
-
-Future schema acceptance, local file adapters, replay storage, signing,
-evaluation, evidence generation, verification, and output atomicity must be
-introduced only with their own contract, tests, threat-model updates, and
-promotion evidence. No later adapter may weaken the R1 parser limits or use a
-fallible parser mode that accepts duplicate keys.
+The evaluator has no execution adapter. Its `ALLOW` output does not cross the
+trust boundary into an external action. The local verifier has no dependency on
+the evaluator crate and checks emitted content integrity/links only; it does not
+independently authenticate inputs or re-run policy semantics.

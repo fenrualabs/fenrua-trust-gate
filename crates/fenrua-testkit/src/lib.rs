@@ -1,5 +1,5 @@
-//! Deterministic, test-only R1 foundations. These types are not an operational
-//! replay service, clock source, or a substitute for a future replay design.
+//! Deterministic, test-only foundations. These types are not an operational
+//! replay service, clock source, or a substitute for a production replay design.
 
 use std::collections::BTreeMap;
 
@@ -63,7 +63,9 @@ impl ReplayCheckpoint for MemoryReplayCheckpoint {
 
 #[cfg(test)]
 mod tests {
-    use fenrua_gate::{ReplayCheckpoint, ReplayKey, ReplayState};
+    use fenrua_gate::{EvaluationInput, ReplayCheckpoint, ReplayKey, ReplayState, evaluate};
+    use fenrua_protocol::{JsonValue, R2DocumentKind, parse_r2_document};
+    use fenrua_verify::verify_local_evaluation;
 
     use super::{FixedClock, MemoryReplayCheckpoint};
 
@@ -89,5 +91,95 @@ mod tests {
             MemoryReplayCheckpoint::unavailable().check(&key),
             ReplayState::Unavailable
         );
+    }
+
+    fn document(source: &str, kind: R2DocumentKind) -> fenrua_protocol::R2Document {
+        match parse_r2_document(source.as_bytes(), kind) {
+            Ok(document) => document,
+            Err(error) => panic!("R2 fixture must parse: {error}"),
+        }
+    }
+
+    fn local_input(request: &str) -> EvaluationInput {
+        match EvaluationInput::new(
+            document(
+                include_str!("../../../fixtures/r2/manifest.json"),
+                R2DocumentKind::EntityManifest,
+            ),
+            document(
+                include_str!("../../../fixtures/r2/policy-allow.json"),
+                R2DocumentKind::AuthorityPolicy,
+            ),
+            document(request, R2DocumentKind::ToolCallRequest),
+            document(
+                include_str!("../../../fixtures/r2/revocations-current.json"),
+                R2DocumentKind::RevocationSet,
+            ),
+            "2026-07-14T00:01:00.000Z".to_owned(),
+        ) {
+            Ok(input) => input,
+            Err(error) => panic!("R2 input must construct: {error}"),
+        }
+    }
+
+    fn decision(value: &JsonValue) -> String {
+        let JsonValue::Object(envelope) = value else {
+            panic!("evaluation artifact must be an object");
+        };
+        let Some(JsonValue::Object(document)) = envelope.get("decision") else {
+            panic!("evaluation artifact must contain a decision object");
+        };
+        let Some(JsonValue::String(value)) = document.get("decision") else {
+            panic!("decision value must be a string");
+        };
+        value.clone()
+    }
+
+    #[test]
+    fn independently_verifies_gate_output_and_detects_tampering() {
+        let artifact = match evaluate(&local_input(include_str!(
+            "../../../fixtures/r2/request-offline.json"
+        ))) {
+            Ok(artifact) => artifact,
+            Err(error) => panic!("R2 allow fixture must evaluate: {error}"),
+        };
+        assert_eq!(decision(artifact.value()), "ALLOW");
+        let report = match verify_local_evaluation(artifact.value()) {
+            Ok(report) => report,
+            Err(error) => panic!("separate verifier must inspect gate output: {error}"),
+        };
+        assert!(report.integrity_verified());
+
+        let mut tampered = artifact.into_value();
+        let JsonValue::Object(envelope) = &mut tampered else {
+            panic!("evaluation artifact must be an object");
+        };
+        let Some(JsonValue::Object(document)) = envelope.get_mut("decision") else {
+            panic!("evaluation artifact must contain a mutable decision object");
+        };
+        document.insert("decision".to_owned(), JsonValue::String("DENY".to_owned()));
+        let report = match verify_local_evaluation(&tampered) {
+            Ok(report) => report,
+            Err(error) => {
+                panic!("tampered structural envelope must still receive a report: {error}")
+            }
+        };
+        assert!(!report.integrity_verified());
+    }
+
+    #[test]
+    fn replay_sensitive_fixture_is_deterministically_denied() {
+        let artifact = match evaluate(&local_input(include_str!(
+            "../../../fixtures/r2/request-replay-required.json"
+        ))) {
+            Ok(artifact) => artifact,
+            Err(error) => panic!("R2 replay fixture must evaluate: {error}"),
+        };
+        assert_eq!(decision(artifact.value()), "DENY");
+        let report = match verify_local_evaluation(artifact.value()) {
+            Ok(report) => report,
+            Err(error) => panic!("separate verifier must inspect denial evidence: {error}"),
+        };
+        assert!(report.integrity_verified());
     }
 }

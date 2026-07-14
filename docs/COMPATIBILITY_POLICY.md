@@ -1,13 +1,19 @@
 # Compatibility Policy
 
-Status: R1 placeholder policy; no public compatibility commitment
+Status: R2 local prototype record; no public compatibility commitment
 
-R1 has no accepted input/output schema, API, SDK, CLI file contract, or
-released artifact. Therefore it offers no compatibility or support-window
-promise. `0.1.0-r1.0` identifies an unreleased source foundation only.
+`0.1.0-r2.0` identifies an unreleased source prototype. It offers no supported
+platform list, SDK/API promise, support window, migration path, or persistence
+guarantee. The accepted R2 subset is pinned to
+`fenrua-specs/v0.1@268788e18bb39d69ffed706294d2605878f04c34` and rejects unknown
+schemas, fields, profiles, and future versions.
 
-A future compatibility policy must define semantic versioning, schema version
-rules, CLI/SDK/API support windows, migration tooling, deprecation and
-emergency-deprecation procedures, and an explicit no-downgrade rule. Until
-then, callers must not persist or integrate against R1 discovery output as a
-stable product contract.
+The R2 CLI is an explicit local fixture interface, not a stable product API.
+Its file commands and output envelope may change before a promotion decision.
+Callers must not persist, distribute, or integrate against it as a supported
+contract.
+
+A future released compatibility policy must define semantic/schema/CLI/SDK/API
+versioning, support and deprecation windows, migration, emergency deprecation,
+and no-downgrade rules. No future profile may silently interpret a document that
+this local profile rejects.

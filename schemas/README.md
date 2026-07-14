@@ -1,7 +1,8 @@
 # Schema Boundary
 
-No normative schema file is present in this repository at R1. The bootstrap
-identifier list is discoverable only as `reserved-unreleased`; it does not
-authorize a parser to accept a document, and it does not define a JSON Schema
-contract. Frozen local `v1` schemas belong to the later owner-approved schemas
-and contract train.
+No normative schema file is released from this repository. R2 structurally
+admits only a closed local subset pinned to
+`fenrua-specs/v0.1@268788e18bb39d69ffed706294d2605878f04c34`; it is not a
+general JSON Schema implementation or an interoperability commitment. Frozen
+v1 schema publication, immutable vectors, and compatibility support remain in
+the separately governed schema and contract train.

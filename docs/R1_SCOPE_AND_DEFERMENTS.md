@@ -1,39 +1,39 @@
-# R1 Scope and Deferred Work
+# R1 Foundation and R2 Local Prototype Scope
 
-Status: R1 specification foundation; no product availability claim
+Status: R1 foundation retained; R2 local-only prototype active
 Last reviewed: 2026-07-14
 
-## Delivered Foundation Boundary
+R1 established bounded parsing, canonicalisation, safe failure records,
+reserved profile discovery, and deterministic test scaffolding. R2 builds a
+narrow local workflow on that foundation. It is not a promotion to a reference
+implementation, limited preview, or public product release.
 
-R1 delivers local, deterministic primitives that later work can review without
-an implicit service dependency:
+## Delivered R2 Boundary
 
-- strict bounded JSON syntax parsing, including duplicate-key rejection;
-- deterministic canonical bytes and domain-separated SHA-256 digests;
-- safe problem categories and a non-leaky adapter envelope;
-- explicit reserved-unreleased schema/profile discovery;
-- a replay-checkpoint trait and deterministic test fixtures;
-- source admission, dependency, and security-reporting boundaries.
+- closed structural admission for entity manifest, authority policy, tool-call
+  request, revocation set, decision, evidence bundle, receipt, verification
+  result, and R2 evaluation envelope;
+- a source pin to `fenrua-specs/v0.1@268788e18bb39d69ffed706294d2605878f04c34`;
+- deterministic local-unsigned payload-digest checking for the four direct
+  inputs and all emitted records;
+- deterministic time/freshness, scope, identity, revocation, constrained-rule,
+  deny-overrides, and no-match-deny behavior;
+- deterministic decision, evidence bundle, receipt, and separate local
+  envelope-integrity verifier;
+- explicit-file CLI commands and public-safe synthetic fixtures.
 
 ## Deferred by Design
 
-The following needs frozen normative schemas, vectors, profile review, and
-later promotion evidence. None is represented as implemented here:
-
-| Capability | Deferred reason | Minimum later gate |
+| Capability | Why it remains deferred | Minimum later gate |
 | --- | --- | --- |
-| Strict schema validation | The bootstrap reserves names but does not release JSON Schema definitions. | Approved specs repository and immutable negative vectors. |
-| Policy evaluation and decisions | A constrained policy contract and denial semantics need their own review. | Policy evaluator train with deny-overrides corpus. |
-| Signatures and keys | Profile labels are not implementation approval or cryptographic review. | Published profile, vectors, key custody, independent crypto review. |
-| Evidence and receipts | Output fields and independent verification contract are not released. | Evidence/receipt schema, vectors, independent verifier. |
-| Replay operation | The trait is local and test-only; no durable atomic store exists. | Reviewed replay design and bounded state implementation. |
-| CLI file commands | Exact schema contracts and atomic output semantics are not yet implementable truthfully. | Stable schema and evidence trains. |
-| SDK/API/control plane | The local path has no network implementation. | Stable contract, tenant/auth controls, operations evidence. |
-| Release/public availability | Source existence is not release evidence. | R3-to-R4 gate in `PROMOTION_GATES.md`. |
+| General v1 schema support | R2 only accepts a closed profile subset. | Immutable released schemas and complete vectors. |
+| Signer authentication and keys | Local unsigned payload digest is not a signature. | Reviewed profile, custody, rotation, and vectors. |
+| Durable replay control | R2 fails closed when replay state is mandatory. | Scoped atomic storage and concurrency tests. |
+| Approvals and policy distribution | There is no control plane or approval adapter. | Signed policy/approval design and integration tests. |
+| Artifact-byte integrity | R2 records caller-declared payload digests only. | Defined artifact acquisition and byte-binding contract. |
+| Independent policy assurance | The verifier checks emitted integrity and links only. | Separate policy implementation/reproduction review. |
+| Release and availability | Source and tests are not a release. | R3 to R4 gates in `PROMOTION_GATES.md`. |
 
-## Explicit Non-Claims
-
-This source foundation does not claim production readiness, independent
-verification, cryptographic assurance, key custody, tenant isolation,
-availability, reliability, a security certification, or a completed Trust Gate
-workflow.
+No R2 source record claims production readiness, cryptographic assurance,
+tenant isolation, availability, support, certification, or a completed public
+Trust Gate offering.

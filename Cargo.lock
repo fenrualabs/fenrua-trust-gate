@@ -48,7 +48,7 @@ dependencies = [
 
 [[package]]
 name = "fenrua-c14n"
-version = "0.1.0-r1.0"
+version = "0.1.0-r2.0"
 dependencies = [
  "fenrua-protocol",
  "sha2",
@@ -56,40 +56,46 @@ dependencies = [
 
 [[package]]
 name = "fenrua-cli"
-version = "0.1.0-r1.0"
+version = "0.1.0-r2.0"
 dependencies = [
+ "fenrua-c14n",
  "fenrua-crypto",
+ "fenrua-gate",
  "fenrua-protocol",
+ "fenrua-verify",
 ]
 
 [[package]]
 name = "fenrua-crypto"
-version = "0.1.0-r1.0"
+version = "0.1.0-r2.0"
 dependencies = [
  "fenrua-protocol",
 ]
 
 [[package]]
 name = "fenrua-gate"
-version = "0.1.0-r1.0"
+version = "0.1.0-r2.0"
 dependencies = [
+ "fenrua-c14n",
  "fenrua-protocol",
 ]
 
 [[package]]
 name = "fenrua-protocol"
-version = "0.1.0-r1.0"
+version = "0.1.0-r2.0"
 
 [[package]]
 name = "fenrua-testkit"
-version = "0.1.0-r1.0"
+version = "0.1.0-r2.0"
 dependencies = [
  "fenrua-gate",
+ "fenrua-protocol",
+ "fenrua-verify",
 ]
 
 [[package]]
 name = "fenrua-verify"
-version = "0.1.0-r1.0"
+version = "0.1.0-r2.0"
 dependencies = [
  "fenrua-c14n",
  "fenrua-protocol",

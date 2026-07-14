@@ -1,4 +1,4 @@
-//! Deterministic R1 draft canonical JSON and domain-separated digest primitives.
+//! Deterministic R1 foundation and R2 local-prototype canonical JSON primitives.
 //!
 //! This is deliberately not a released canonicalisation profile. It is bounded,
 //! fully local, and suitable for developing immutable test vectors before a
@@ -39,16 +39,26 @@ impl Default for CanonicalizationLimits {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DigestDomain {
     CanonicalJsonR1Draft,
+    CanonicalJsonR2Prototype,
     EvidenceBundleR1Draft,
     VerificationResultR1Draft,
+    LocalUnsignedPayloadR2Prototype,
+    EvidenceBundleR2Prototype,
+    VerificationResultR2Prototype,
+    EvaluationArtifactR2Prototype,
 }
 
 impl DigestDomain {
     pub const fn label(self) -> &'static str {
         match self {
             Self::CanonicalJsonR1Draft => "canonical-json:r1-draft",
+            Self::CanonicalJsonR2Prototype => "canonical-json:r2-prototype",
             Self::EvidenceBundleR1Draft => "evidence-bundle:r1-draft",
             Self::VerificationResultR1Draft => "verification-result:r1-draft",
+            Self::LocalUnsignedPayloadR2Prototype => "local-unsigned-payload:r2-prototype",
+            Self::EvidenceBundleR2Prototype => "evidence-bundle:r2-prototype",
+            Self::VerificationResultR2Prototype => "verification-result:r2-prototype",
+            Self::EvaluationArtifactR2Prototype => "evaluation-artifact:r2-prototype",
         }
     }
 }
@@ -63,14 +73,33 @@ impl Digest {
     }
 
     pub fn to_prefixed_hex(&self) -> String {
+        let mut encoded = String::from("sha256:");
+        encoded.push_str(&self.to_hex());
+        encoded
+    }
+
+    pub fn to_hex(&self) -> String {
         const HEX: &[u8; 16] = b"0123456789abcdef";
-        let mut encoded = String::with_capacity("sha256:".len() + self.0.len() * 2);
-        encoded.push_str("sha256:");
+        let mut encoded = String::with_capacity(self.0.len() * 2);
         for byte in self.0 {
             encoded.push(char::from(HEX[usize::from(byte >> 4)]));
             encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
         }
         encoded
+    }
+
+    pub fn from_hex(value: &str) -> Result<Self, Problem> {
+        if value.len() != 64 {
+            return Err(Problem::new(ProblemCode::InvalidDigest));
+        }
+        let mut bytes = [0_u8; 32];
+        for (index, byte) in bytes.iter_mut().enumerate() {
+            let start = index.saturating_mul(2);
+            let high = hex_value(value.as_bytes()[start])?;
+            let low = hex_value(value.as_bytes()[start.saturating_add(1)])?;
+            *byte = (high << 4) | low;
+        }
+        Ok(Self(bytes))
     }
 }
 
@@ -100,9 +129,35 @@ pub fn canonicalize(value: &JsonValue, limits: CanonicalizationLimits) -> Result
 
 /// Applies the R1 draft canonicalisation profile and its canonical JSON domain.
 pub fn canonical_document(value: &JsonValue) -> Result<CanonicalDocument, Problem> {
+    canonical_document_in_domain(value, DigestDomain::CanonicalJsonR1Draft)
+}
+
+/// Canonicalises a document and hashes it in a named local profile domain.
+pub fn canonical_document_in_domain(
+    value: &JsonValue,
+    domain: DigestDomain,
+) -> Result<CanonicalDocument, Problem> {
     let bytes = canonicalize(value, CanonicalizationLimits::R1_FOUNDATION)?;
-    let digest = domain_separated_digest(DigestDomain::CanonicalJsonR1Draft, &bytes);
+    let digest = domain_separated_digest(domain, &bytes);
     Ok(CanonicalDocument { bytes, digest })
+}
+
+/// Computes a canonical payload digest after removing one top-level envelope
+/// member. R2 uses this only for the explicit local-unsigned signature field,
+/// avoiding a circular self-digest.
+pub fn canonical_document_without_top_level_member(
+    value: &JsonValue,
+    member: &str,
+    domain: DigestDomain,
+) -> Result<CanonicalDocument, Problem> {
+    let mut payload = value.clone();
+    let JsonValue::Object(fields) = &mut payload else {
+        return Err(Problem::new(ProblemCode::InvalidArgument));
+    };
+    if fields.remove(member).is_none() {
+        return Err(Problem::new(ProblemCode::InvalidArgument));
+    }
+    canonical_document_in_domain(&payload, domain)
 }
 
 /// Hashes exact bytes in a fixed, version-labelled domain.
@@ -246,6 +301,14 @@ fn hex(value: u8) -> u8 {
     HEX[usize::from(value & 0x0f)]
 }
 
+fn hex_value(value: u8) -> Result<u8, Problem> {
+    match value {
+        b'0'..=b'9' => Ok(value - b'0'),
+        b'a'..=b'f' => Ok(value - b'a' + 10),
+        _ => Err(Problem::new(ProblemCode::InvalidDigest)),
+    }
+}
+
 fn canonical_number(
     number: &JsonNumber,
     limits: CanonicalizationLimits,
@@ -364,7 +427,8 @@ mod tests {
     use fenrua_protocol::{JsonValue, ParseLimits, ProblemCode, parse_json};
 
     use super::{
-        CanonicalizationLimits, DigestDomain, canonical_document, canonicalize,
+        CanonicalizationLimits, Digest, DigestDomain, canonical_document,
+        canonical_document_in_domain, canonical_document_without_top_level_member, canonicalize,
         domain_separated_digest,
     };
 
@@ -427,5 +491,38 @@ mod tests {
             Err(error) => panic!("negative zero must canonicalize: {error}"),
         };
         assert_eq!(bytes, b"0");
+    }
+
+    #[test]
+    fn local_unsigned_payload_omits_only_the_explicit_signature_member() {
+        let value = parse(br#"{"signature":{"payloadDigest":"not-used"},"z":1,"a":"text"}"#);
+        let payload = match canonical_document_without_top_level_member(
+            &value,
+            "signature",
+            DigestDomain::LocalUnsignedPayloadR2Prototype,
+        ) {
+            Ok(payload) => payload,
+            Err(error) => panic!("payload must canonicalize: {error}"),
+        };
+        let direct = match canonical_document_in_domain(
+            &parse(br#"{"a":"text","z":1}"#),
+            DigestDomain::LocalUnsignedPayloadR2Prototype,
+        ) {
+            Ok(document) => document,
+            Err(error) => panic!("direct payload must canonicalize: {error}"),
+        };
+        assert_eq!(payload, direct);
+    }
+
+    #[test]
+    fn lowercase_hex_round_trips_and_other_forms_fail_closed() {
+        let original =
+            domain_separated_digest(DigestDomain::EvaluationArtifactR2Prototype, b"r2-fixture");
+        let parsed = match Digest::from_hex(&original.to_hex()) {
+            Ok(parsed) => parsed,
+            Err(error) => panic!("generated lowercase hex must parse: {error}"),
+        };
+        assert_eq!(parsed, original);
+        assert!(Digest::from_hex("A".repeat(64).as_str()).is_err());
     }
 }

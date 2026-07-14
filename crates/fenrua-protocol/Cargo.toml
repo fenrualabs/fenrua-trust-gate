@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Strict bounded JSON and R1 draft protocol discovery primitives"
+description = "Strict bounded JSON and R2 local-profile protocol primitives"
 
 [lints]
 workspace = true

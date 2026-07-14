@@ -1,6 +1,6 @@
 use core::fmt;
 
-/// Stable categories for safe, machine-readable R1 foundation failures.
+/// Stable categories for safe, machine-readable local prototype failures.
 ///
 /// The category intentionally excludes user-controlled input, filesystem paths,
 /// host details, stack traces, and nested dependency messages.
@@ -23,6 +23,10 @@ pub enum ProblemCode {
     FeatureUnavailable,
     InvalidArgument,
     IntegrityMismatch,
+    SchemaValidationFailed,
+    InvalidTimestamp,
+    InvalidDigest,
+    IoFailure,
 }
 
 impl ProblemCode {
@@ -45,6 +49,10 @@ impl ProblemCode {
             Self::FeatureUnavailable => "feature_unavailable",
             Self::InvalidArgument => "invalid_argument",
             Self::IntegrityMismatch => "integrity_mismatch",
+            Self::SchemaValidationFailed => "schema_validation_failed",
+            Self::InvalidTimestamp => "invalid_timestamp",
+            Self::InvalidDigest => "invalid_digest",
+            Self::IoFailure => "io_failure",
         }
     }
 
@@ -66,9 +74,15 @@ impl ProblemCode {
             Self::TrailingData => "Input contains trailing data",
             Self::UnsupportedSchema => "Schema is not accepted by this foundation",
             Self::UnsupportedProfile => "Profile is not accepted by this foundation",
-            Self::FeatureUnavailable => "Feature is unavailable in the R1 foundation",
+            Self::FeatureUnavailable => "Feature is unavailable in the active local profile",
             Self::InvalidArgument => "Command arguments are invalid",
             Self::IntegrityMismatch => "Canonical digest does not match",
+            Self::SchemaValidationFailed => {
+                "Input does not satisfy the active local schema profile"
+            }
+            Self::InvalidTimestamp => "Timestamp is not valid for the active local profile",
+            Self::InvalidDigest => "Digest is not valid for the active local profile",
+            Self::IoFailure => "Local input or output operation failed",
         }
     }
 
@@ -82,13 +96,19 @@ impl ProblemCode {
             | Self::MaxNumberBytesExceeded
             | Self::MaxCanonicalBytesExceeded
             | Self::MaxCanonicalExponentExceeded => 413,
-            Self::UnsupportedSchema | Self::UnsupportedProfile | Self::FeatureUnavailable => 422,
+            Self::UnsupportedSchema
+            | Self::UnsupportedProfile
+            | Self::FeatureUnavailable
+            | Self::SchemaValidationFailed => 422,
             Self::IntegrityMismatch => 409,
             Self::InputInvalidUtf8
             | Self::InvalidJson
             | Self::DuplicateKey
             | Self::TrailingData
-            | Self::InvalidArgument => 400,
+            | Self::InvalidArgument
+            | Self::InvalidTimestamp
+            | Self::InvalidDigest => 400,
+            Self::IoFailure => 500,
         }
     }
 }

@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Independent R1 draft integrity verification primitive"
+description = "Separate R2 local-evidence integrity verifier"
 
 [dependencies]
 fenrua-c14n.workspace = true

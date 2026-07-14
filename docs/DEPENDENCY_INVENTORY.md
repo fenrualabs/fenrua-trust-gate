@@ -1,11 +1,11 @@
 # Dependency Inventory
 
-Status: R1 bootstrap inventory; not a release SBOM or vulnerability attestation
+Status: R2 prototype inventory; not a release SBOM or vulnerability attestation
 Lockfile: `Cargo.lock` version 4
 Review owner: A8 security and supply chain role, subject to named-maintainer confirmation
 
 All entries are crates.io registry packages with Cargo checksums in the lockfile.
-Security state means only that the package is recorded for R1 review; it does
+Security state means only that the package is recorded for R2 review; it does
 not assert that it has been audited, is vulnerability-free, or is release
 approved. The removal plan for each transitive package is to remove its parent
 dependency or replace the parent after reviewed design work.

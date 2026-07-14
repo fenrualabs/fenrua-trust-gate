@@ -1,27 +1,27 @@
 # Dependency Policy
 
-Status: active R1 source policy
+Status: active R2 source policy
 
 ## Rules
 
 - Every direct and transitive package is pinned by `Cargo.lock`.
 - Direct registry dependencies use an exact Cargo version requirement.
 - Git dependencies, unchecked binary downloads, install scripts, telemetry-by-
-  default dependencies, async runtimes, HTTP clients, URL resolvers, database
-  clients, scripting engines, and generic error-erasure libraries are not
-  admitted to the R1 decision foundation.
+default dependencies, async runtimes, HTTP clients, URL resolvers, database
+clients, scripting engines, and generic error-erasure libraries are not
+admitted to the R2 local prototype.
 - A dependency change needs a purpose, Fenrua owner, exact version, licence,
   source, security state, update plan, and removal plan in
   `DEPENDENCY_INVENTORY.md` before the lockfile is refreshed.
 - `scripts/check-dependency-policy.sh` compares the exact lockfile package set
   with `ci/approved-lock-packages.txt` and rejects Git sources.
-- The R1 guard is not a vulnerability scan or legal opinion. Vulnerability,
+- The R2 guard is not a vulnerability scan or legal opinion. Vulnerability,
   licence, and provenance review remain release-gate work.
 
 ## Current Direct Dependency
 
 `sha2 = "=0.10.9"` is the only third-party direct dependency. It supplies an
-established SHA-256 implementation for deterministic integrity primitives. R1
+established SHA-256 implementation for deterministic integrity primitives. R2
 does not implement custom cryptographic algorithms and does not use `sha2` for
 signing or private-key operations.
 

@@ -11,19 +11,19 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0-r1.0"
+version = "0.1.0-r2.0"
 edition = "2024"
 rust-version = "1.97"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/fenrualabs/fenrua-trust-gate"
-description = "Unreleased R1 foundation for Fenrua Trust Gate"
+description = "Unreleased R2 local-only Fenrua Trust Gate prototype"
 
 [workspace.dependencies]
-fenrua-c14n = { path = "crates/fenrua-c14n", version = "=0.1.0-r1.0" }
-fenrua-crypto = { path = "crates/fenrua-crypto", version = "=0.1.0-r1.0" }
-fenrua-gate = { path = "crates/fenrua-gate", version = "=0.1.0-r1.0" }
-fenrua-protocol = { path = "crates/fenrua-protocol", version = "=0.1.0-r1.0" }
-fenrua-verify = { path = "crates/fenrua-verify", version = "=0.1.0-r1.0" }
+fenrua-c14n = { path = "crates/fenrua-c14n", version = "=0.1.0-r2.0" }
+fenrua-crypto = { path = "crates/fenrua-crypto", version = "=0.1.0-r2.0" }
+fenrua-gate = { path = "crates/fenrua-gate", version = "=0.1.0-r2.0" }
+fenrua-protocol = { path = "crates/fenrua-protocol", version = "=0.1.0-r2.0" }
+fenrua-verify = { path = "crates/fenrua-verify", version = "=0.1.0-r2.0" }
 sha2 = "=0.10.9"
 
 [workspace.lints.rust]

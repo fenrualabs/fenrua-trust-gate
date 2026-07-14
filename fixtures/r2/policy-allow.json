@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "fenrua.authority-policy.v1",
+  "policyId": "urn:fenrua:policy:r2-demo",
+  "scope": {
+    "tenantId": "urn:fenrua:tenant:demo",
+    "environmentId": "urn:fenrua:environment:development"
+  },
+  "revision": "1",
+  "lifecycle": "active",
+  "issuerId": "urn:fenrua:organisation:fenrua",
+  "issuedAt": "2026-07-14T00:00:00.000Z",
+  "effectiveAt": "2026-07-14T00:00:00.000Z",
+  "expiresAt": "2026-07-15T00:00:00.000Z",
+  "rules": [
+    {
+      "ruleId": "urn:fenrua:rule:r2-allow",
+      "effect": "ALLOW",
+      "subjectSelector": {
+        "ids": ["urn:fenrua:entity:r2-agent"]
+      },
+      "actorSelector": {
+        "ids": ["urn:fenrua:actor:r2-operator"]
+      },
+      "actions": ["tool.execute"],
+      "resources": ["artifact:r2-build"],
+      "scope": {
+        "tenantId": "urn:fenrua:tenant:demo",
+        "environmentId": "urn:fenrua:environment:development"
+      },
+      "reasonCode": "ALLOW_POLICY_MATCH"
+    }
+  ],
+  "integrity": {
+    "algorithm": "sha-256",
+    "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "evidenceRefs": [
+    {
+      "evidenceBundleId": "urn:fenrua:evidence-bundle:bootstrap-evidence",
+      "digest": {
+        "algorithm": "sha-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "createdAt": "2026-07-14T00:00:00.000Z"
+    }
+  ],
+  "signature": {
+    "profile": "local-unsigned-development",
+    "keyId": "urn:fenrua:key:local-unsigned-development",
+    "payloadDigest": {
+      "algorithm": "sha-256",
+      "value": "f49361c9dbc879179af9474e2d92b28972aec33140c65142dfd3a307a42da13f"
+    }
+  }
+}
