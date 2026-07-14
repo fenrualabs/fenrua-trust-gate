@@ -1335,6 +1335,53 @@ mod tests {
         signed_document(policy, R2DocumentKind::AuthorityPolicy)
     }
 
+    fn policy_with_time_window(not_before: &str, not_after: &str) -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        let Some(JsonValue::Array(rules)) = fields.get_mut("rules") else {
+            panic!("policy fixture must contain rules");
+        };
+        let Some(JsonValue::Object(rule)) = rules.first_mut() else {
+            panic!("policy fixture must contain one rule");
+        };
+        rule.insert(
+            "timeWindow".to_owned(),
+            value(&format!(
+                r#"{{"notBefore":"{not_before}","notAfter":"{not_after}"}}"#
+            )),
+        );
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
+    fn policy_with_matching_deny_and_allow() -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        let Some(JsonValue::Array(rules)) = fields.get_mut("rules") else {
+            panic!("policy fixture must contain rules");
+        };
+        let Some(mut deny) = rules.first().cloned() else {
+            panic!("policy fixture must contain one rule");
+        };
+        let JsonValue::Object(deny_fields) = &mut deny else {
+            panic!("policy rule must be an object");
+        };
+        deny_fields.insert(
+            "ruleId".to_owned(),
+            JsonValue::String("urn:fenrua:rule:r2-matching-deny".to_owned()),
+        );
+        deny_fields.insert("effect".to_owned(), JsonValue::String("DENY".to_owned()));
+        deny_fields.insert(
+            "reasonCode".to_owned(),
+            JsonValue::String("DENY_EXPLICIT".to_owned()),
+        );
+        rules.push(deny);
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
     fn manifest_with_expiry(expires_at: &str) -> R2Document {
         let mut manifest = value(include_str!("../../../fixtures/r2/manifest.json"));
         let JsonValue::Object(fields) = &mut manifest else {
@@ -2043,6 +2090,77 @@ mod tests {
             Ok("2029-01-01T00:00:00.000Z".to_owned())
         );
         assert!(next_utc_millisecond("9999-12-31T23:59:59.999Z").is_err());
+    }
+
+    #[test]
+    fn policy_time_window_is_half_open_at_each_millisecond_boundary() {
+        let not_before = "2026-07-14T00:00:30.000Z";
+        let not_after = "2026-07-14T00:00:31.000Z";
+        let cases = [
+            (
+                "before time window",
+                "2026-07-14T00:00:29.999Z",
+                "DENY",
+                "POLICY_VIOLATION",
+                "DENY_NO_MATCH",
+            ),
+            (
+                "at time window start",
+                not_before,
+                "ALLOW",
+                "PASS_WITH_LIMITATIONS",
+                "ALLOW_POLICY_MATCH",
+            ),
+            (
+                "just before time window end",
+                "2026-07-14T00:00:30.999Z",
+                "ALLOW",
+                "PASS_WITH_LIMITATIONS",
+                "ALLOW_POLICY_MATCH",
+            ),
+            (
+                "at time window end",
+                not_after,
+                "DENY",
+                "POLICY_VIOLATION",
+                "DENY_NO_MATCH",
+            ),
+            (
+                "after time window",
+                "2026-07-14T00:00:31.001Z",
+                "DENY",
+                "POLICY_VIOLATION",
+                "DENY_NO_MATCH",
+            ),
+        ];
+
+        for (case_name, evaluation_at, decision, verification_state, reason) in cases {
+            let artifact = evaluate_input_at(
+                manifest(),
+                policy_with_time_window(not_before, not_after),
+                request(false, true),
+                revocations("1"),
+                evaluation_at,
+            );
+            assert_single_decision(case_name, &artifact, decision, verification_state, reason);
+        }
+    }
+
+    #[test]
+    fn matching_explicit_deny_overrides_a_matching_allow_rule() {
+        let artifact = evaluate_input(
+            manifest(),
+            policy_with_matching_deny_and_allow(),
+            request(false, true),
+            revocations("1"),
+        );
+        assert_single_decision(
+            "matching explicit deny",
+            &artifact,
+            "DENY",
+            "POLICY_VIOLATION",
+            "DENY_EXPLICIT",
+        );
     }
 
     #[test]

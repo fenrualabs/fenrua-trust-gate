@@ -35,3 +35,8 @@ strict fail-closed record but gives the decision, evidence, and receipt a single
 UTC-millisecond output interval. This preserves a structurally valid linked
 record without extending stale authority or making a `DENY` reusable as an
 authorisation result.
+
+Rule time windows use the half-open UTC interval `[notBefore, notAfter)`: a
+matching request is in scope at `notBefore` and out of scope at `notAfter`.
+When an ALLOW and an explicit DENY rule both match the same request, the DENY
+record wins.
