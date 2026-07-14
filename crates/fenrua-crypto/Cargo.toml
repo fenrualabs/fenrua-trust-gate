@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "R1 draft signing-profile registry without key operations"
+description = "R2 signing-profile registry without key operations"
 
 [dependencies]
 fenrua-protocol.workspace = true

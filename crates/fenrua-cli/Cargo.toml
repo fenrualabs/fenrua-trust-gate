@@ -5,15 +5,18 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Truthful discovery CLI for the unreleased R1 Trust Gate foundation"
+description = "R2 local-only Trust Gate prototype CLI"
 
 [[bin]]
 name = "fenrua"
 path = "src/main.rs"
 
 [dependencies]
+fenrua-c14n.workspace = true
 fenrua-crypto.workspace = true
+fenrua-gate.workspace = true
 fenrua-protocol.workspace = true
+fenrua-verify.workspace = true
 
 [lints]
 workspace = true

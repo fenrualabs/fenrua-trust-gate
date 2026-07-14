@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "R1 draft deterministic canonical JSON and digest primitives"
+description = "R2 local-prototype canonical JSON and digest primitives"
 
 [dependencies]
 fenrua-protocol.workspace = true

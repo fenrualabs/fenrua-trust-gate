@@ -1,4 +1,4 @@
-name: R1 foundation checks
+name: R2 local prototype checks
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  r1-foundation:
+  r2-local-prototype:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -16,4 +16,4 @@ jobs:
         with:
           toolchain: 1.97.0
           components: rustfmt, clippy
-      - run: ./ci/r1-checks.sh
+      - run: ./ci/r2-checks.sh

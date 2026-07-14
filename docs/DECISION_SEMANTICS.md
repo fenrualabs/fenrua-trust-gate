@@ -1,20 +1,28 @@
-# R1 Decision Semantics Boundary
+# R2 Decision Semantics
 
-Status: terminology boundary; no decision implementation exists
+Status: local-only prototype semantics; not a released decision contract
 
-## Terms
+| Term | R2 local meaning | It does not mean |
+| --- | --- | --- |
+| Admission | Strict bounded JSON parsing plus closed-profile structural checks. | General JSON Schema validation or interoperability approval. |
+| Local payload check | Recompute the local-unsigned digest excluding `signature`. | Signer authentication, key ownership, or trusted origin. |
+| Evaluation | Deterministic evaluation of the accepted subset with an explicit timestamp. | A hosted policy service or an instruction to act. |
+| Authorisation record | Local `ALLOW` or fail-closed `DENY` record. | Permission to execute an external action. |
+| Execution | A caller's separate external action. | Implemented or directed by this repository. |
+| Evidence | Deterministic local decision/evidence/receipt records. | An append-only evidence service or public assurance artifact. |
+| Verification | Separate recomputation of emitted payload digests and record links. | Policy re-evaluation, independent assurance, or cryptographic signer verification. |
+| Attestation | A future authenticated producer claim under a promoted profile. | The R2 local-unsigned marker. |
 
-| Term | R1 meaning |
-| --- | --- |
-| Validation | Checking a future document against a released schema. Not implemented. |
-| Verification | Checking a claim or artifact against defined evidence. Only a generic canonical-digest comparison primitive exists. |
-| Evaluation | Applying a released constrained policy to validated inputs. Not implemented. |
-| Authorisation | A future evaluator's `ALLOW` or `DENY` decision. Not implemented. |
-| Execution | An external action taken by a caller. Never directed by R1. |
-| Evidence | A future structured record. Not implemented. |
-| Attestation | A claim by a defined producer under a released profile. Not implemented. |
+R2 first rejects malformed or unsupported documents. For structurally admitted
+inputs, it records `DENY_SIGNATURE_INVALID` when an input local payload digest
+does not match. It denies on declared owner/issuer disagreement, scope mismatch,
+inactive or expired inputs, identity/capability mismatch, stale revocations,
+mandatory replay protection, revocations, no policy match, and unavailable
+required evidence or approval.
+Explicit deny rules override allow rules. A parse ambiguity is never converted
+into allow.
 
-A successful parse or matching generic digest is not a policy validation,
-verification result, authorisation decision, approval, or instruction to
-execute any action. R1 contains no `ALLOW`/`DENY` producer precisely to avoid
-confusing these roles.
+The evaluation instant is supplied by the caller as a UTC millisecond timestamp;
+R2 does not read a wall clock. Identical valid inputs and the same instant
+produce identical output. That determinism is bounded to the R2 implementation
+and its pinned dependency/toolchain context, not a cross-platform certification.

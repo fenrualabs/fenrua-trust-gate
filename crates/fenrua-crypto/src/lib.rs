@@ -1,4 +1,4 @@
-//! Signing-profile discovery for the R1 foundation.
+//! Signing-profile discovery for the R1 foundation and R2 local prototype.
 //!
 //! This crate contains no signing, verification, private-key, provider, or
 //! network implementation. It makes profile names explicit so callers cannot

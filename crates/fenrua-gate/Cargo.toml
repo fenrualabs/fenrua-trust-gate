@@ -5,9 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "R1 fail-closed admission boundary and replay interface"
+description = "R2 local-only deterministic Trust Gate prototype"
 
 [dependencies]
+fenrua-c14n.workspace = true
 fenrua-protocol.workspace = true
 
 [lints]
