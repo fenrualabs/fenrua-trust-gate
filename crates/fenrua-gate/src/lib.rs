@@ -1221,6 +1221,72 @@ mod tests {
         signed_document(policy, R2DocumentKind::AuthorityPolicy)
     }
 
+    fn policy_with_lifecycle(lifecycle: &str) -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        fields.insert(
+            "lifecycle".to_owned(),
+            JsonValue::String(lifecycle.to_owned()),
+        );
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
+    fn policy_with_resource(resource: &str) -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        let Some(JsonValue::Array(rules)) = fields.get_mut("rules") else {
+            panic!("policy fixture must contain rules");
+        };
+        let Some(JsonValue::Object(rule)) = rules.first_mut() else {
+            panic!("policy fixture must contain one rule");
+        };
+        rule.insert(
+            "resources".to_owned(),
+            JsonValue::Array(vec![JsonValue::String(resource.to_owned())]),
+        );
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
+    fn policy_with_required_approval() -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        let Some(JsonValue::Array(rules)) = fields.get_mut("rules") else {
+            panic!("policy fixture must contain rules");
+        };
+        let Some(JsonValue::Object(rule)) = rules.first_mut() else {
+            panic!("policy fixture must contain one rule");
+        };
+        rule.insert(
+            "requiredApprovals".to_owned(),
+            value(r#"[{"approvalType":"operator-approval","minimumCount":1}]"#),
+        );
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
+    fn policy_with_ambiguous_allow_reason() -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        let Some(JsonValue::Array(rules)) = fields.get_mut("rules") else {
+            panic!("policy fixture must contain rules");
+        };
+        let Some(JsonValue::Object(rule)) = rules.first_mut() else {
+            panic!("policy fixture must contain one rule");
+        };
+        rule.insert(
+            "reasonCode".to_owned(),
+            JsonValue::String("DENY_EXPLICIT".to_owned()),
+        );
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
     fn policy_with_unresolved_deny() -> R2Document {
         let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
         let JsonValue::Object(fields) = &mut policy else {
@@ -1329,6 +1395,33 @@ mod tests {
         }
     }
 
+    fn request_with_subject(subject_id: &str) -> R2Document {
+        let mut request = value(include_str!("../../../fixtures/r2/request-offline.json"));
+        let JsonValue::Object(fields) = &mut request else {
+            panic!("request fixture must be an object");
+        };
+        fields.insert(
+            "subjectId".to_owned(),
+            JsonValue::String(subject_id.to_owned()),
+        );
+        signed_document(request, R2DocumentKind::ToolCallRequest)
+    }
+
+    fn request_with_environment(environment_id: &str) -> R2Document {
+        let mut request = value(include_str!("../../../fixtures/r2/request-offline.json"));
+        let JsonValue::Object(fields) = &mut request else {
+            panic!("request fixture must be an object");
+        };
+        let Some(JsonValue::Object(scope)) = fields.get_mut("scope") else {
+            panic!("request fixture must contain a scope");
+        };
+        scope.insert(
+            "environmentId".to_owned(),
+            JsonValue::String(environment_id.to_owned()),
+        );
+        signed_document(request, R2DocumentKind::ToolCallRequest)
+    }
+
     fn revocations(sequence: &str) -> R2Document {
         revocations_with_issuer(sequence, "urn:fenrua:organisation:fenrua")
     }
@@ -1348,6 +1441,50 @@ mod tests {
             "issuerId".to_owned(),
             JsonValue::String(issuer_id.to_owned()),
         );
+        signed_document(revocations, R2DocumentKind::RevocationSet)
+    }
+
+    fn revocations_with_next_update(next_update_at: &str) -> R2Document {
+        let mut revocations = value(include_str!(
+            "../../../fixtures/r2/revocations-current.json"
+        ));
+        let JsonValue::Object(fields) = &mut revocations else {
+            panic!("revocation fixture must be an object");
+        };
+        fields.insert(
+            "nextUpdateAt".to_owned(),
+            JsonValue::String(next_update_at.to_owned()),
+        );
+        signed_document(revocations, R2DocumentKind::RevocationSet)
+    }
+
+    fn revocations_with_target(target_type: &str, target_id: &str) -> R2Document {
+        let mut revocations = value(include_str!(
+            "../../../fixtures/r2/revocations-current.json"
+        ));
+        let JsonValue::Object(fields) = &mut revocations else {
+            panic!("revocation fixture must be an object");
+        };
+        let Some(JsonValue::Array(entries)) = fields.get_mut("revocations") else {
+            panic!("revocation fixture must contain entries");
+        };
+        entries.push(value(&format!(
+            r#"{{
+  "revocationId": "urn:fenrua:revocation:r2-{target_type}-test",
+  "targetId": "{target_id}",
+  "targetType": "{target_type}",
+  "reasonCode": "DENY_EXPLICIT",
+  "effectiveAt": "2026-07-14T00:00:00.000Z",
+  "evidenceRefs": [{{
+    "evidenceBundleId": "urn:fenrua:evidence-bundle:bootstrap-evidence",
+    "digest": {{
+      "algorithm": "sha-256",
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }},
+    "createdAt": "2026-07-14T00:00:00.000Z"
+  }}]
+}}"#
+        )));
         signed_document(revocations, R2DocumentKind::RevocationSet)
     }
 
@@ -1379,12 +1516,28 @@ mod tests {
         request: R2Document,
         revocations: R2Document,
     ) -> EvaluationArtifact {
+        evaluate_input_at(
+            manifest,
+            policy,
+            request,
+            revocations,
+            "2026-07-14T00:01:00.000Z",
+        )
+    }
+
+    fn evaluate_input_at(
+        manifest: R2Document,
+        policy: R2Document,
+        request: R2Document,
+        revocations: R2Document,
+        evaluation_at: &str,
+    ) -> EvaluationArtifact {
         let input = match EvaluationInput::new(
             manifest,
             policy,
             request,
             revocations,
-            "2026-07-14T00:01:00.000Z".to_owned(),
+            evaluation_at.to_owned(),
         ) {
             Ok(input) => input,
             Err(error) => panic!("fixture input must construct: {error}"),
@@ -1393,6 +1546,43 @@ mod tests {
             Ok(artifact) => artifact,
             Err(error) => panic!("fixture must evaluate: {error}"),
         }
+    }
+
+    fn assert_single_decision(
+        case_name: &str,
+        artifact: &EvaluationArtifact,
+        expected_decision: &str,
+        expected_state: &str,
+        expected_reason: &str,
+    ) {
+        let JsonValue::Object(envelope) = artifact.value() else {
+            panic!("evaluation artifact must be an object");
+        };
+        let Some(JsonValue::Object(decision)) = envelope.get("decision") else {
+            panic!("evaluation artifact must contain a decision");
+        };
+        assert!(
+            matches!(
+                decision.get("decision"),
+                Some(JsonValue::String(value)) if value == expected_decision
+            ),
+            "{case_name}: unexpected decision"
+        );
+        assert!(
+            matches!(
+                decision.get("verificationState"),
+                Some(JsonValue::String(value)) if value == expected_state
+            ),
+            "{case_name}: unexpected verification state"
+        );
+        assert!(
+            matches!(
+                decision.get("reasonCodes"),
+                Some(JsonValue::Array(values))
+                    if matches!(values.as_slice(), [JsonValue::String(value)] if value == expected_reason)
+            ),
+            "{case_name}: unexpected reason codes"
+        );
     }
 
     #[test]
@@ -1420,6 +1610,149 @@ mod tests {
         let artifact = evaluate_fixture("DENY", false, true, "1");
         let rendered = format!("{:?}", artifact.value());
         assert!(rendered.contains("DENY_EXPLICIT"));
+    }
+
+    #[test]
+    fn decision_boundary_matrix_covers_supported_fail_closed_outcomes() {
+        let artifact_digest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let cases = [
+            (
+                "request scope mismatch",
+                evaluate_input(
+                    manifest(),
+                    policy("ALLOW"),
+                    request_with_environment("urn:fenrua:environment:other"),
+                    revocations("1"),
+                ),
+                "DENY",
+                "FAIL_CLOSED",
+                "DENY_UNSUPPORTED_ENVIRONMENT",
+            ),
+            (
+                "request subject mismatch",
+                evaluate_input(
+                    manifest(),
+                    policy("ALLOW"),
+                    request_with_subject("urn:fenrua:entity:other"),
+                    revocations("1"),
+                ),
+                "DENY",
+                "FAIL_CLOSED",
+                "DENY_MISSING_IDENTITY",
+            ),
+            (
+                "retired policy",
+                evaluate_input(
+                    manifest(),
+                    policy_with_lifecycle("retired"),
+                    request(false, true),
+                    revocations("1"),
+                ),
+                "DENY",
+                "STALE",
+                "DENY_POLICY_EXPIRED",
+            ),
+            (
+                "stale revocation state",
+                evaluate_input(
+                    manifest(),
+                    policy("ALLOW"),
+                    request(false, true),
+                    revocations_with_next_update("2026-07-14T00:01:00.000Z"),
+                ),
+                "DENY",
+                "STALE",
+                "DENY_STALE_REVOCATION_STATE",
+            ),
+            (
+                "revoked policy",
+                evaluate_input(
+                    manifest(),
+                    policy("ALLOW"),
+                    request(false, true),
+                    revocations_with_target("policy", "urn:fenrua:policy:r2-demo"),
+                ),
+                "DENY",
+                "REVOKED",
+                "DENY_POLICY_REVOKED",
+            ),
+            (
+                "revoked subject",
+                evaluate_input(
+                    manifest(),
+                    policy("ALLOW"),
+                    request(false, true),
+                    revocations_with_target("subject", "urn:fenrua:entity:r2-agent"),
+                ),
+                "DENY",
+                "REVOKED",
+                "DENY_SUBJECT_REVOKED",
+            ),
+            (
+                "revoked key",
+                evaluate_input(
+                    manifest(),
+                    policy("ALLOW"),
+                    request(false, true),
+                    revocations_with_target("key", "urn:fenrua:key:local-unsigned-development"),
+                ),
+                "DENY",
+                "REVOKED",
+                "DENY_KEY_REVOKED",
+            ),
+            (
+                "revoked artifact",
+                evaluate_input(
+                    manifest_with_artifact(artifact_digest),
+                    policy("ALLOW"),
+                    request_with_artifact(artifact_digest),
+                    revocations_with_target("artifact", "urn:fenrua:artifact:r2-build"),
+                ),
+                "DENY",
+                "REVOKED",
+                "DENY_ARTIFACT_REVOKED",
+            ),
+            (
+                "no matching resource",
+                evaluate_input(
+                    manifest(),
+                    policy_with_resource("artifact:unmatched"),
+                    request(false, true),
+                    revocations("1"),
+                ),
+                "DENY",
+                "POLICY_VIOLATION",
+                "DENY_NO_MATCH",
+            ),
+            (
+                "unresolved approval",
+                evaluate_input(
+                    manifest(),
+                    policy_with_required_approval(),
+                    request(false, true),
+                    revocations("1"),
+                ),
+                "DENY",
+                "FAIL_CLOSED",
+                "DENY_MISSING_APPROVAL",
+            ),
+            (
+                "ambiguous allow reason",
+                evaluate_input(
+                    manifest(),
+                    policy_with_ambiguous_allow_reason(),
+                    request(false, true),
+                    revocations("1"),
+                ),
+                "DENY",
+                "FAIL_CLOSED",
+                "DENY_AMBIGUOUS_POLICY",
+            ),
+        ];
+
+        for (case_name, artifact, decision, verification_state, reason) in cases {
+            assert_single_decision(case_name, &artifact, decision, verification_state, reason);
+        }
     }
 
     #[test]
