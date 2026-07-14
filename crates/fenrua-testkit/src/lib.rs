@@ -63,9 +63,11 @@ impl ReplayCheckpoint for MemoryReplayCheckpoint {
 
 #[cfg(test)]
 mod tests {
-    use fenrua_c14n::{DigestDomain, canonical_document_without_top_level_member};
+    use fenrua_c14n::{
+        DigestDomain, canonical_document_in_domain, canonical_document_without_top_level_member,
+    };
     use fenrua_gate::{EvaluationInput, ReplayCheckpoint, ReplayKey, ReplayState, evaluate};
-    use fenrua_protocol::{JsonValue, R2DocumentKind, parse_r2_document};
+    use fenrua_protocol::{JsonValue, ParseLimits, R2DocumentKind, parse_json, parse_r2_document};
     use fenrua_verify::verify_local_evaluation;
 
     use super::{FixedClock, MemoryReplayCheckpoint};
@@ -101,6 +103,37 @@ mod tests {
         }
     }
 
+    fn signed_document(mut value: JsonValue, kind: R2DocumentKind) -> fenrua_protocol::R2Document {
+        resign_local_unsigned(&mut value);
+        let bytes =
+            match canonical_document_in_domain(&value, DigestDomain::CanonicalJsonR2Prototype) {
+                Ok(document) => document.bytes().to_vec(),
+                Err(error) => panic!("test document must serialize: {error}"),
+            };
+        match parse_r2_document(&bytes, kind) {
+            Ok(document) => document,
+            Err(error) => panic!("test document must validate: {error}"),
+        }
+    }
+
+    fn policy_with_expiry(expires_at: &str) -> fenrua_protocol::R2Document {
+        let mut policy = match parse_json(
+            include_str!("../../../fixtures/r2/policy-allow.json").as_bytes(),
+            ParseLimits::R1_FOUNDATION,
+        ) {
+            Ok(value) => value,
+            Err(error) => panic!("policy fixture must parse: {error}"),
+        };
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        fields.insert(
+            "expiresAt".to_owned(),
+            JsonValue::String(expires_at.to_owned()),
+        );
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
     fn local_input(request: &str) -> EvaluationInput {
         match EvaluationInput::new(
             document(
@@ -117,6 +150,31 @@ mod tests {
                 R2DocumentKind::RevocationSet,
             ),
             "2026-07-14T00:01:00.000Z".to_owned(),
+        ) {
+            Ok(input) => input,
+            Err(error) => panic!("R2 input must construct: {error}"),
+        }
+    }
+
+    fn local_input_with_policy_at(
+        policy: fenrua_protocol::R2Document,
+        evaluation_at: &str,
+    ) -> EvaluationInput {
+        match EvaluationInput::new(
+            document(
+                include_str!("../../../fixtures/r2/manifest.json"),
+                R2DocumentKind::EntityManifest,
+            ),
+            policy,
+            document(
+                include_str!("../../../fixtures/r2/request-offline.json"),
+                R2DocumentKind::ToolCallRequest,
+            ),
+            document(
+                include_str!("../../../fixtures/r2/revocations-current.json"),
+                R2DocumentKind::RevocationSet,
+            ),
+            evaluation_at.to_owned(),
         ) {
             Ok(input) => input,
             Err(error) => panic!("R2 input must construct: {error}"),
@@ -187,6 +245,24 @@ mod tests {
             }
         };
         assert!(!report.integrity_verified());
+    }
+
+    #[test]
+    fn independently_verifies_an_expired_policy_denial_envelope() {
+        let expires_at = "2026-07-14T00:00:30.000Z";
+        let artifact = match evaluate(&local_input_with_policy_at(
+            policy_with_expiry(expires_at),
+            expires_at,
+        )) {
+            Ok(artifact) => artifact,
+            Err(error) => panic!("expired policy must emit an R2 denial envelope: {error}"),
+        };
+        assert_eq!(decision(artifact.value()), "DENY");
+        let report = match verify_local_evaluation(artifact.value()) {
+            Ok(report) => report,
+            Err(error) => panic!("separate verifier must inspect expired-policy denial: {error}"),
+        };
+        assert!(report.integrity_verified());
     }
 
     #[test]

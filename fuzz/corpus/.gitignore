@@ -1,0 +1,10 @@
+*
+!.gitignore
+!bounded_json_r2/
+bounded_json_r2/*
+!bounded_json_r2/manifest.json
+!bounded_json_r2/policy-allow.json
+!bounded_json_r2/request-offline.json
+!bounded_json_r2/revocations-current.json
+!bounded_json_r2/duplicate-key.json
+!bounded_json_r2/unpaired-surrogate.json

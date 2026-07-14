@@ -2,17 +2,22 @@
 
 Status: R2 source-policy record; external intake channel not yet configured
 
+The required source-level lifecycle is defined in
+`docs/VULNERABILITY_MANAGEMENT.md`. It is not evidence of a staffed security
+operation, configured private case system, customer notification programme, or
+release authority.
+
 ## Current Reporting Boundary
 
 Do not publish vulnerabilities, exploit details, secrets, customer data, raw
 logs, scan output, screenshots, or private evidence in a public issue, pull
 request, discussion, commit, or repository file.
 
-The repository does not record a verified private reporting endpoint or response
-SLA. Until the owner configures one, a reporter who cannot safely use the
-repository's private vulnerability-reporting capability must request a verified
-contact path from Fenrua through an established business channel. This policy
-does not claim that a private reporting channel currently exists.
+No owner-designated private reporting endpoint, escalation contact, or response
+SLA is currently configured. Until the owner configures and verifies one, a
+reporter who needs a private channel must request a verified contact path from
+Fenrua through an established business channel. This policy does not claim that
+a private reporting channel currently exists.
 
 ## R2 Scope
 
@@ -35,15 +40,15 @@ Share only the minimum safe metadata needed to open a private report:
 
 ## Internal Handling Record
 
-Once a verified private route exists, each finding must use the public-safe
-template at `docs/templates/SECURITY_FINDING_RECORD.md` as a record shape. Raw
-evidence stays outside this repository. No finding is closed by deleting a
-report, weakening a test, or changing a fixture to hide the behavior.
+Once a verified private route exists, handle each finding under
+`docs/VULNERABILITY_MANAGEMENT.md` using the public-safe template at
+`docs/templates/SECURITY_FINDING_RECORD.md` as a record shape. Raw evidence
+stays outside this repository. No finding is closed by deleting a report,
+weakening a test, or changing a fixture to hide the behavior.
 
 ## Still Required
 
 - owner-designated private reporting endpoint and escalation contacts;
-- named triage owner and response targets;
-- severity taxonomy and disclosure decision process;
-- coordinated disclosure and public-advisory process;
+- named triage owner and private evidence system;
+- owner-designated release authority and future customer-notification operation;
 - provider/account boundaries for any future release workflow.

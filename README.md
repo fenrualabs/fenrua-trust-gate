@@ -108,7 +108,8 @@ schema-pin record check.
 Do not add secrets, customer data, private evidence, screenshots, raw audit
 reports, scan dumps, or working-review material. See
 [Repository Admission Policy](docs/REPOSITORY_ADMISSION_POLICY.md) and
-[SECURITY.md](SECURITY.md).
+[Security Reporting](SECURITY.md), and
+[Vulnerability Management](docs/VULNERABILITY_MANAGEMENT.md).
 
 ## License
 

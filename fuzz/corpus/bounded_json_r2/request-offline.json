@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "fenrua.tool-call-request.v1",
+  "requestId": "urn:fenrua:tool-call-request:r2-demo",
+  "scope": {
+    "tenantId": "urn:fenrua:tenant:demo",
+    "environmentId": "urn:fenrua:environment:development"
+  },
+  "subjectId": "urn:fenrua:entity:r2-agent",
+  "actorId": "urn:fenrua:actor:r2-operator",
+  "action": "tool.execute",
+  "resource": "artifact:r2-build",
+  "context": {
+    "contextId": "urn:fenrua:context:r2-demo",
+    "audience": "urn:fenrua:audience:r2-tool",
+    "bindings": [
+      {"key": "purpose", "value": "fixture"}
+    ]
+  },
+  "issuedAt": "2026-07-14T00:00:00.000Z",
+  "expiresAt": "2026-07-14T00:05:00.000Z",
+  "nonce": "fixture_nonce_0001",
+  "replayRequired": false,
+  "payloadDigest": {
+    "algorithm": "sha-256",
+    "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "signature": {
+    "profile": "local-unsigned-development",
+    "keyId": "urn:fenrua:key:local-unsigned-development",
+    "payloadDigest": {
+      "algorithm": "sha-256",
+      "value": "fc17978c8409ddb2f321e21559acf687b31df7730f589e31a1cfbbb3adff52a7"
+    }
+  }
+}
