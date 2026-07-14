@@ -20,7 +20,9 @@ inactive or expired inputs, identity/capability mismatch, stale revocations,
 mandatory replay protection, revocations, no policy match, and unavailable
 required evidence or approval. An assessed explicit deny overrides allow; a
 base-matching deny with an unavailable requirement fails closed before an allow
-can win. A parse ambiguity is never converted into allow.
+can win. After the other selectors match, an audience substitution yields
+`DENY_AUDIENCE_MISMATCH` and a context identifier or ordered binding substitution
+yields `DENY_CONTEXT_MISMATCH`. A parse ambiguity is never converted into allow.
 
 The evaluation instant is supplied by the caller as a UTC millisecond timestamp;
 R2 does not read a wall clock. Identical valid inputs and the same instant

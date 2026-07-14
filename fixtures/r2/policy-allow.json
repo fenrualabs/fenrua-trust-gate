@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "fenrua.authority-policy.v1",
+  "schemaVersion": "fenrua.authority-policy.v2",
   "policyId": "urn:fenrua:policy:r2-demo",
   "scope": {
     "tenantId": "urn:fenrua:tenant:demo",
@@ -27,6 +27,13 @@
         "tenantId": "urn:fenrua:tenant:demo",
         "environmentId": "urn:fenrua:environment:development"
       },
+      "contextSelector": {
+        "contextId": "urn:fenrua:context:r2-demo",
+        "audience": "urn:fenrua:audience:r2-tool",
+        "bindings": [
+          {"key": "purpose", "value": "fixture"}
+        ]
+      },
       "reasonCode": "ALLOW_POLICY_MATCH"
     }
   ],
@@ -49,7 +56,7 @@
     "keyId": "urn:fenrua:key:local-unsigned-development",
     "payloadDigest": {
       "algorithm": "sha-256",
-      "value": "f49361c9dbc879179af9474e2d92b28972aec33140c65142dfd3a307a42da13f"
+      "value": "d1092d87076610d458763bc1d47cfcfc50895fec6732a622f7ef2a75f6c6bd29"
     }
   }
 }

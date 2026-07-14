@@ -13,11 +13,11 @@ implementation, limited preview, or public product release.
 - closed structural admission for entity manifest, authority policy, tool-call
   request, revocation set, decision, evidence bundle, receipt, verification
   result, and R2 evaluation envelope;
-- a source pin to `fenrua-specs/v0.1@268788e18bb39d69ffed706294d2605878f04c34`;
+- a source pin to `fenrua-specs/v0.2@3ed6e685aeacb537ef0138e5227d0ddf98cf94ff`;
 - deterministic local-unsigned payload-digest checking for the four direct
   inputs and all emitted records;
-- deterministic time/freshness, scope, identity, revocation, constrained-rule,
-  deny-overrides, and no-match-deny behavior;
+- deterministic time/freshness, scope, identity, revocation, exact contextual
+  rule matching, deny-overrides, and no-match-deny behavior;
 - deterministic decision, evidence bundle, receipt, and separate local
   envelope-integrity verifier;
 - explicit-file CLI commands and public-safe synthetic fixtures.
