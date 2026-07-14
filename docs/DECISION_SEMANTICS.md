@@ -28,3 +28,10 @@ The evaluation instant is supplied by the caller as a UTC millisecond timestamp;
 R2 does not read a wall clock. Identical valid inputs and the same instant
 produce identical output. That determinism is bounded to the R2 implementation
 and its pinned dependency/toolchain context, not a cross-platform certification.
+
+An emitted record normally expires at the earliest direct-input expiration. If
+the evaluation occurs at or after any direct-input expiration, R2 still emits a
+strict fail-closed record but gives the decision, evidence, and receipt a single
+UTC-millisecond output interval. This preserves a structurally valid linked
+record without extending stale authority or making a `DENY` reusable as an
+authorisation result.

@@ -112,8 +112,15 @@ pub fn evaluate(input: &EvaluationInput) -> Result<EvaluationArtifact, Problem> 
     let decision_id = derived_id("urn:fenrua:decision:r2-", seed);
     let bundle_id = derived_id("urn:fenrua:evidence-bundle:r2-", seed);
     let receipt_id = derived_id("urn:fenrua:receipt:r2-", seed);
+    let output_expires_at = decision_expiry(&values, &plan)?;
 
-    let decision = signed_document(build_decision(&values, &plan, &decision_id, &bundle_id)?)?;
+    let decision = signed_document(build_decision(
+        &values,
+        &plan,
+        &decision_id,
+        &bundle_id,
+        &output_expires_at,
+    )?)?;
     let decision_digest = document_digest(&decision)?;
     let evidence = signed_document(build_evidence(
         &values,
@@ -122,6 +129,7 @@ pub fn evaluate(input: &EvaluationInput) -> Result<EvaluationArtifact, Problem> 
         &decision,
         &decision_digest,
         &bundle_id,
+        &output_expires_at,
     )?)?;
     let evidence_digest = document_digest(&evidence)?;
     let receipt = signed_document(build_receipt(
@@ -131,6 +139,7 @@ pub fn evaluate(input: &EvaluationInput) -> Result<EvaluationArtifact, Problem> 
         &bundle_id,
         &receipt_id,
         &evidence_digest,
+        &output_expires_at,
     )?)?;
 
     let value = object([
@@ -826,6 +835,7 @@ fn build_decision(
     plan: &DecisionPlan,
     decision_id: &str,
     bundle_id: &str,
+    expires_at: &str,
 ) -> Result<JsonValue, Problem> {
     Ok(object([
         ("schemaVersion", text("fenrua.decision.v1")),
@@ -844,7 +854,7 @@ fn build_decision(
         ("requestDigest", digest_json(values.request.digest)),
         ("evidenceBundleId", text(bundle_id)),
         ("issuedAt", text(&values.evaluation_at)),
-        ("expiresAt", text(decision_expiry(values))),
+        ("expiresAt", text(expires_at)),
         ("limitations", strings(&plan.limitations)),
     ]))
 }
@@ -856,6 +866,7 @@ fn build_evidence(
     decision: &JsonValue,
     decision_digest: &Digest,
     bundle_id: &str,
+    expires_at: &str,
 ) -> Result<JsonValue, Problem> {
     let event_id = derived_id("urn:fenrua:audit-event:r2-", *seed);
     let event_digest = domain_separated_digest(
@@ -940,7 +951,7 @@ fn build_evidence(
         ),
         ("limitations", strings(&plan.limitations)),
         ("createdAt", text(&values.evaluation_at)),
-        ("expiresAt", text(decision_expiry(values))),
+        ("expiresAt", text(expires_at)),
         ("producer", text("urn:fenrua:producer:trust-gate-local-r2")),
         ("producerVersion", text(env!("CARGO_PKG_VERSION"))),
         ("signatureProfile", text(LOCAL_UNSIGNED_PROFILE)),
@@ -955,6 +966,7 @@ fn build_receipt(
     bundle_id: &str,
     receipt_id: &str,
     evidence_digest: &Digest,
+    expires_at: &str,
 ) -> Result<JsonValue, Problem> {
     let summary = match plan.decision {
         "ALLOW" => {
@@ -976,7 +988,7 @@ fn build_receipt(
         ("resource", text(&values.request.resource)),
         ("reasonCodes", string_array(&plan.reason_codes)),
         ("issuedAt", text(&values.evaluation_at)),
-        ("expiresAt", text(decision_expiry(values))),
+        ("expiresAt", text(expires_at)),
         ("bundleDigest", digest_json(*evidence_digest)),
         ("summary", text(summary)),
         ("limitations", strings(&plan.limitations)),
@@ -1008,8 +1020,8 @@ fn document_digest(value: &JsonValue) -> Result<Digest, Problem> {
     Ok(canonical_document_in_domain(value, DigestDomain::CanonicalJsonR2Prototype)?.digest())
 }
 
-fn decision_expiry(values: &EvaluationValues) -> &str {
-    [
+fn decision_expiry(values: &EvaluationValues, plan: &DecisionPlan) -> Result<String, Problem> {
+    let earliest_input_expiry = [
         values.request.expires_at.as_str(),
         values.policy.expires_at.as_str(),
         values.manifest.expires_at.as_str(),
@@ -1017,7 +1029,85 @@ fn decision_expiry(values: &EvaluationValues) -> &str {
     ]
     .into_iter()
     .min()
-    .unwrap_or(values.request.expires_at.as_str())
+    .unwrap_or(values.request.expires_at.as_str());
+
+    if earliest_input_expiry > values.evaluation_at.as_str() {
+        return Ok(earliest_input_expiry.to_owned());
+    }
+
+    if plan.decision == "DENY" {
+        // A denial must remain structurally valid even when its source evidence
+        // is already stale. Keep that envelope interval to one UTC millisecond
+        // rather than extending it to a still-valid unrelated input boundary.
+        return next_utc_millisecond(&values.evaluation_at);
+    }
+
+    Err(Problem::new(ProblemCode::InvalidTimestamp))
+}
+
+fn next_utc_millisecond(timestamp: &str) -> Result<String, Problem> {
+    validate_r2_timestamp(timestamp)?;
+    let bytes = timestamp.as_bytes();
+    let mut year = decimal_component(&bytes[0..4]);
+    let mut month = decimal_component(&bytes[5..7]);
+    let mut day = decimal_component(&bytes[8..10]);
+    let mut hour = decimal_component(&bytes[11..13]);
+    let mut minute = decimal_component(&bytes[14..16]);
+    let mut second = decimal_component(&bytes[17..19]);
+    let mut millisecond = decimal_component(&bytes[20..23]);
+
+    millisecond += 1;
+    if millisecond == 1_000 {
+        millisecond = 0;
+        second += 1;
+    }
+    if second == 60 {
+        second = 0;
+        minute += 1;
+    }
+    if minute == 60 {
+        minute = 0;
+        hour += 1;
+    }
+    if hour == 24 {
+        hour = 0;
+        day += 1;
+    }
+    if day > days_in_month(year, month) {
+        day = 1;
+        month += 1;
+    }
+    if month == 13 {
+        month = 1;
+        year += 1;
+    }
+    if year > 9_999 {
+        return Err(Problem::new(ProblemCode::InvalidTimestamp));
+    }
+
+    Ok(format!(
+        "{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{millisecond:03}Z"
+    ))
+}
+
+fn decimal_component(bytes: &[u8]) -> u32 {
+    bytes
+        .iter()
+        .fold(0_u32, |value, byte| value * 10 + u32::from(byte - b'0'))
+}
+
+fn days_in_month(year: u32, month: u32) -> u32 {
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if is_leap_year(year) => 29,
+        2 => 28,
+        _ => 0,
+    }
+}
+
+fn is_leap_year(year: u32) -> bool {
+    (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
 }
 
 fn decision_id(decision: &JsonValue) -> Result<&str, Problem> {
@@ -1113,7 +1203,7 @@ mod tests {
         JsonValue, ParseLimits, R2Document, R2DocumentKind, parse_json, parse_r2_document,
     };
 
-    use super::{EvaluationArtifact, EvaluationInput, evaluate};
+    use super::{EvaluationArtifact, EvaluationInput, evaluate, next_utc_millisecond};
 
     fn value(source: &str) -> JsonValue {
         match parse_json(source.as_bytes(), ParseLimits::R1_FOUNDATION) {
@@ -1231,6 +1321,30 @@ mod tests {
             JsonValue::String(lifecycle.to_owned()),
         );
         signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
+    fn policy_with_expiry(expires_at: &str) -> R2Document {
+        let mut policy = value(include_str!("../../../fixtures/r2/policy-allow.json"));
+        let JsonValue::Object(fields) = &mut policy else {
+            panic!("policy fixture must be an object");
+        };
+        fields.insert(
+            "expiresAt".to_owned(),
+            JsonValue::String(expires_at.to_owned()),
+        );
+        signed_document(policy, R2DocumentKind::AuthorityPolicy)
+    }
+
+    fn manifest_with_expiry(expires_at: &str) -> R2Document {
+        let mut manifest = value(include_str!("../../../fixtures/r2/manifest.json"));
+        let JsonValue::Object(fields) = &mut manifest else {
+            panic!("manifest fixture must be an object");
+        };
+        fields.insert(
+            "expiresAt".to_owned(),
+            JsonValue::String(expires_at.to_owned()),
+        );
+        signed_document(manifest, R2DocumentKind::EntityManifest)
     }
 
     fn policy_with_resource(resource: &str) -> R2Document {
@@ -1422,6 +1536,18 @@ mod tests {
         signed_document(request, R2DocumentKind::ToolCallRequest)
     }
 
+    fn request_with_expiry(expires_at: &str) -> R2Document {
+        let mut request = value(include_str!("../../../fixtures/r2/request-offline.json"));
+        let JsonValue::Object(fields) = &mut request else {
+            panic!("request fixture must be an object");
+        };
+        fields.insert(
+            "expiresAt".to_owned(),
+            JsonValue::String(expires_at.to_owned()),
+        );
+        signed_document(request, R2DocumentKind::ToolCallRequest)
+    }
+
     fn revocations(sequence: &str) -> R2Document {
         revocations_with_issuer(sequence, "urn:fenrua:organisation:fenrua")
     }
@@ -1454,6 +1580,20 @@ mod tests {
         fields.insert(
             "nextUpdateAt".to_owned(),
             JsonValue::String(next_update_at.to_owned()),
+        );
+        signed_document(revocations, R2DocumentKind::RevocationSet)
+    }
+
+    fn revocations_with_expiry(expires_at: &str) -> R2Document {
+        let mut revocations = value(include_str!(
+            "../../../fixtures/r2/revocations-current.json"
+        ));
+        let JsonValue::Object(fields) = &mut revocations else {
+            panic!("revocation fixture must be an object");
+        };
+        fields.insert(
+            "expiresAt".to_owned(),
+            JsonValue::String(expires_at.to_owned()),
         );
         signed_document(revocations, R2DocumentKind::RevocationSet)
     }
@@ -1583,6 +1723,35 @@ mod tests {
             ),
             "{case_name}: unexpected reason codes"
         );
+    }
+
+    fn assert_output_times(artifact: &EvaluationArtifact, issued_at: &str, expires_at: &str) {
+        let JsonValue::Object(envelope) = artifact.value() else {
+            panic!("evaluation artifact must be an object");
+        };
+        for (record_name, issued_field) in [
+            ("decision", "issuedAt"),
+            ("evidenceBundle", "createdAt"),
+            ("receipt", "issuedAt"),
+        ] {
+            let Some(JsonValue::Object(record)) = envelope.get(record_name) else {
+                panic!("evaluation artifact must contain {record_name}");
+            };
+            assert!(
+                matches!(
+                    record.get(issued_field),
+                    Some(JsonValue::String(value)) if value == issued_at
+                ),
+                "{record_name}: unexpected issue timestamp"
+            );
+            assert!(
+                matches!(
+                    record.get("expiresAt"),
+                    Some(JsonValue::String(value)) if value == expires_at
+                ),
+                "{record_name}: unexpected expiration timestamp"
+            );
+        }
     }
 
     #[test]
@@ -1753,6 +1922,127 @@ mod tests {
         for (case_name, artifact, decision, verification_state, reason) in cases {
             assert_single_decision(case_name, &artifact, decision, verification_state, reason);
         }
+    }
+
+    #[test]
+    fn policy_expiry_boundary_emits_a_strict_minimal_deny_envelope() {
+        let expires_at = "2026-07-14T00:00:30.000Z";
+        let before_expiry = evaluate_input_at(
+            manifest(),
+            policy_with_expiry(expires_at),
+            request(false, true),
+            revocations("1"),
+            "2026-07-14T00:00:29.999Z",
+        );
+        assert_single_decision(
+            "policy just before expiry",
+            &before_expiry,
+            "ALLOW",
+            "PASS_WITH_LIMITATIONS",
+            "ALLOW_POLICY_MATCH",
+        );
+        assert_output_times(&before_expiry, "2026-07-14T00:00:29.999Z", expires_at);
+
+        let at_expiry = evaluate_input_at(
+            manifest(),
+            policy_with_expiry(expires_at),
+            request(false, true),
+            revocations("1"),
+            expires_at,
+        );
+        assert_single_decision(
+            "policy at expiry",
+            &at_expiry,
+            "DENY",
+            "STALE",
+            "DENY_POLICY_EXPIRED",
+        );
+        assert_output_times(&at_expiry, expires_at, "2026-07-14T00:00:30.001Z");
+
+        let repeat_at_expiry = evaluate_input_at(
+            manifest(),
+            policy_with_expiry(expires_at),
+            request(false, true),
+            revocations("1"),
+            expires_at,
+        );
+        assert_eq!(at_expiry, repeat_at_expiry);
+    }
+
+    #[test]
+    fn each_direct_expiry_boundary_emits_a_strict_deny_envelope() {
+        let expires_at = "2026-07-14T00:00:30.000Z";
+        let assert_expired = |case_name: &str,
+                              manifest: R2Document,
+                              policy: R2Document,
+                              request: R2Document,
+                              revocations: R2Document,
+                              expected_state: &str,
+                              expected_reason: &str| {
+            let artifact = evaluate_input_at(manifest, policy, request, revocations, expires_at);
+            assert_single_decision(
+                case_name,
+                &artifact,
+                "DENY",
+                expected_state,
+                expected_reason,
+            );
+            assert_output_times(&artifact, expires_at, "2026-07-14T00:00:30.001Z");
+        };
+
+        assert_expired(
+            "expired manifest",
+            manifest_with_expiry(expires_at),
+            policy("ALLOW"),
+            request(false, true),
+            revocations("1"),
+            "FAIL_CLOSED",
+            "DENY_INVALID_IDENTITY",
+        );
+        assert_expired(
+            "expired policy",
+            manifest(),
+            policy_with_expiry(expires_at),
+            request(false, true),
+            revocations("1"),
+            "STALE",
+            "DENY_POLICY_EXPIRED",
+        );
+        assert_expired(
+            "expired request",
+            manifest(),
+            policy("ALLOW"),
+            request_with_expiry(expires_at),
+            revocations("1"),
+            "STALE",
+            "DENY_FAIL_CLOSED",
+        );
+        assert_expired(
+            "expired revocation set",
+            manifest(),
+            policy("ALLOW"),
+            request(false, true),
+            revocations_with_expiry(expires_at),
+            "STALE",
+            "DENY_STALE_REVOCATION_STATE",
+        );
+    }
+
+    #[test]
+    fn output_expiry_carries_across_utc_calendar_boundaries() {
+        assert_eq!(
+            next_utc_millisecond("2027-02-28T23:59:59.999Z"),
+            Ok("2027-03-01T00:00:00.000Z".to_owned())
+        );
+        assert_eq!(
+            next_utc_millisecond("2028-02-28T23:59:59.999Z"),
+            Ok("2028-02-29T00:00:00.000Z".to_owned())
+        );
+        assert_eq!(
+            next_utc_millisecond("2028-12-31T23:59:59.999Z"),
+            Ok("2029-01-01T00:00:00.000Z".to_owned())
+        );
+        assert!(next_utc_millisecond("9999-12-31T23:59:59.999Z").is_err());
     }
 
     #[test]
