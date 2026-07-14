@@ -1,0 +1,17 @@
+block-buffer@0.10.4
+cfg-if@1.0.4
+cpufeatures@0.2.17
+crypto-common@0.1.7
+digest@0.10.7
+fenrua-c14n@0.1.0-r1.0
+fenrua-cli@0.1.0-r1.0
+fenrua-crypto@0.1.0-r1.0
+fenrua-gate@0.1.0-r1.0
+fenrua-protocol@0.1.0-r1.0
+fenrua-testkit@0.1.0-r1.0
+fenrua-verify@0.1.0-r1.0
+generic-array@0.14.7
+libc@0.2.186
+sha2@0.10.9
+typenum@1.20.1
+version_check@0.9.5
