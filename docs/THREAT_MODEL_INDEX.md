@@ -1,6 +1,12 @@
 # Threat Model Index
 
-Status: R2 public-safe index; detailed threat models and independent review remain deferred
+Status: R2 source-bounded index and detailed register; independent review and
+full product-plane reviews remain deferred
+
+The detailed R2 register is maintained in
+[THREAT_MODEL_R2.md](THREAT_MODEL_R2.md). It records all Industrial 10
+workstream 9 section 19.1 areas while marking unimplemented product planes as
+not applicable to R2 rather than treating them as completed controls.
 
 | Area | R2 boundary | Current mitigation | Remaining work |
 | --- | --- | --- | --- |
@@ -15,7 +21,7 @@ Status: R2 public-safe index; detailed threat models and independent review rema
 | CLI supply chain | Local build invokes Rust toolchain and lockfile. | Pinned toolchain, exact lockfile, CI checks. | Signed artifacts, provenance, SBOM. |
 | Public repository | Public source can receive unsafe evidence. | Admission policy and CI guard. | Protected branches, push protection, named CODEOWNERS. |
 
-This index is not a security assessment or a statement that all future threat
-models are complete. Each new capability requires assets, actors, trust
+This index is not a security assessment or a statement that all future product
+controls are complete. Each new capability requires assets, actors, trust
 boundaries, entry points, abuse cases, mitigations, residual risk, evidence,
-owner, and review date.
+owner, review date, and the applicable promotion evidence.
