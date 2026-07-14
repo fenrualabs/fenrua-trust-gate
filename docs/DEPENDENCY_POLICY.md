@@ -4,7 +4,9 @@ Status: active R2 source policy
 
 ## Rules
 
-- Every direct and transitive package is pinned by `Cargo.lock`.
+- Every direct and transitive package is pinned by the applicable lockfile:
+  `Cargo.lock` for the stable R2 workspace and `fuzz/Cargo.lock` for the
+  isolated nightly fuzz workspace.
 - Direct registry dependencies use an exact Cargo version requirement.
 - Git dependencies, unchecked binary downloads, install scripts, telemetry-by-
 default dependencies, async runtimes, HTTP clients, URL resolvers, database
@@ -13,17 +15,26 @@ admitted to the R2 local prototype.
 - A dependency change needs a purpose, Fenrua owner, exact version, licence,
   source, security state, update plan, and removal plan in
   `DEPENDENCY_INVENTORY.md` before the lockfile is refreshed.
-- `scripts/check-dependency-policy.sh` compares the exact lockfile package set
-  with `ci/approved-lock-packages.txt` and rejects Git sources.
+- `scripts/check-dependency-policy.sh` compares the stable exact lockfile
+  package set with `ci/approved-lock-packages.txt` and rejects Git sources.
+  `scripts/check-fuzz-target.sh` applies the same exact-set and Git-source
+  guard to the isolated fuzz workspace, its curated seeds, and its target
+  boundary markers.
 - The R2 guard is not a vulnerability scan or legal opinion. Vulnerability,
   licence, and provenance review remain release-gate work.
 
-## Current Direct Dependency
+## Current Direct Dependencies
 
 `sha2 = "=0.10.9"` is the only third-party direct dependency. It supplies an
 established SHA-256 implementation for deterministic integrity primitives. R2
 does not implement custom cryptographic algorithms and does not use `sha2` for
 signing or private-key operations.
+
+The isolated, nightly-only fuzz workspace has one additional third-party direct
+dependency: `libfuzzer-sys = "=0.4.13"`. It is used only to build the bounded
+test target in `fuzz/`; it is not linked into the stable R2 CLI, Gate, or
+verifier. Its NCSA runtime licence and target-conditional transitive licences
+remain release-review work.
 
 ## Change Procedure
 

@@ -8,3 +8,4 @@ cargo test --workspace --locked
 ./scripts/check-dependency-policy.sh
 ./scripts/check-verifier-boundary.sh
 ./scripts/check-r2-contract.sh
+./scripts/check-fuzz-target.sh

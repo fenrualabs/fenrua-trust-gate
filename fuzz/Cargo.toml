@@ -1,0 +1,25 @@
+[package]
+name = "fenrua-trust-gate-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "Apache-2.0 OR MIT"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+fenrua-c14n = { path = "../crates/fenrua-c14n" }
+fenrua-protocol = { path = "../crates/fenrua-protocol" }
+libfuzzer-sys = "=0.4.13"
+
+[[bin]]
+name = "bounded_json_r2"
+path = "fuzz_targets/bounded_json_r2.rs"
+test = false
+doc = false
+bench = false
+
+# Keep fuzzing tool dependencies separate from the stable R2 workspace.
+[workspace]
+members = ["."]

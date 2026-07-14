@@ -38,6 +38,7 @@ and the exact R2 schema-pin check.
 | Emitted evidence | Testkit independent verifier tests | The separate verifier recomputes local payload digests and linked decision, evidence, receipt, and expiry relationships. |
 | Admission | Parser, profile, and CLI tests | Bounded input, duplicate-key, unknown-field, unsupported-profile, non-millisecond timestamp, and oversized-file failures are covered. |
 | Generated local properties | `generated_semantic_equivalents_have_one_idempotent_canonical_document` and `generated_duplicate_key_variants_fail_closed_before_canonicalization` | Bounded generated permutations of equivalent JSON spellings produce one canonical document and digest; generated duplicate-key variants fail during parsing. |
+| Bounded fuzzing | `bounded_json_r2` with six curated JSON seeds | On 2026-07-14, cargo-fuzz 0.13.2, libfuzzer-sys 0.4.13, and Rust 1.99.0-nightly completed 10,000 seeded AddressSanitizer iterations with no crash. It exercises strict parsing, canonical round trips, and all four direct R2 admission kinds. |
 
 ## Explicit R2 Deferrals
 
@@ -53,14 +54,15 @@ prototype:
 | Policy distribution, cyclic policy graphs, and supersession service | Deferred | Versioned policy graph and control-plane contract. |
 | Tenant isolation | Deferred | Tenant registry, storage boundary, and cross-tenant integration tests. |
 | SDK, hosted API, and local emulator | Deferred | Stable released interface contract and developer-platform implementation. |
-| Fuzzing, unbounded property generation, cross-platform determinism, and performance limits | Deferred | Release-grade corpus, CI matrix, benchmark, and reproducibility evidence. |
+| Sustained/scheduled fuzzing, unbounded property generation, cross-platform determinism, and performance limits | Deferred | Release-grade corpus minimisation, CI matrix, benchmark, and reproducibility evidence. |
 
 `path`-like resource text is not resolved by R2 because it has no filesystem or
 execution adapter. That does not establish a future path-security guarantee;
 any adapter must define and test its own resource acquisition boundary.
 
 The generated local property tests are a bounded source-level invariant suite.
-They do not claim a fuzz engine, an unbounded property-testing framework,
+The recorded fuzz run is likewise bounded local evidence. Neither claims an
+unbounded property-testing framework, sustained or scheduled fuzzing,
 cross-platform reproduction, performance evidence, or a release-grade corpus.
 
 ## Interpretation Rules

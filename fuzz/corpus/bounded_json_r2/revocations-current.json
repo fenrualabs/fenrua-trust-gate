@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "fenrua.revocation-set.v1",
+  "revocationSetId": "urn:fenrua:revocation-set:r2-demo",
+  "scope": {
+    "tenantId": "urn:fenrua:tenant:demo",
+    "environmentId": "urn:fenrua:environment:development"
+  },
+  "sequence": "1",
+  "issuerId": "urn:fenrua:organisation:fenrua",
+  "issuedAt": "2026-07-14T00:00:00.000Z",
+  "effectiveAt": "2026-07-14T00:00:00.000Z",
+  "expiresAt": "2026-07-15T00:00:00.000Z",
+  "nextUpdateAt": "2026-07-14T01:00:00.000Z",
+  "revocations": [],
+  "integrity": {
+    "algorithm": "sha-256",
+    "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "signature": {
+    "profile": "local-unsigned-development",
+    "keyId": "urn:fenrua:key:local-unsigned-development",
+    "payloadDigest": {
+      "algorithm": "sha-256",
+      "value": "1dc7193a90208fab69651bbf67090c1415e8ebe396fd5d401d79a414b5d982bc"
+    }
+  }
+}

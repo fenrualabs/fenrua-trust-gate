@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "fenrua.entity-manifest.v1",
+  "manifestId": "urn:fenrua:entity-manifest:r2-agent",
+  "subjectId": "urn:fenrua:entity:r2-agent",
+  "ownerId": "urn:fenrua:organisation:fenrua",
+  "scope": {
+    "tenantId": "urn:fenrua:tenant:demo",
+    "environmentId": "urn:fenrua:environment:development"
+  },
+  "entityType": "agent",
+  "lifecycle": "active",
+  "revision": "1",
+  "issuedAt": "2026-07-14T00:00:00.000Z",
+  "expiresAt": "2026-07-15T00:00:00.000Z",
+  "integrity": {
+    "algorithm": "sha-256",
+    "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "evidenceRefs": [
+    {
+      "evidenceBundleId": "urn:fenrua:evidence-bundle:bootstrap-evidence",
+      "digest": {
+        "algorithm": "sha-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "createdAt": "2026-07-14T00:00:00.000Z"
+    }
+  ],
+  "declaredCapabilities": ["tool.execute"],
+  "signature": {
+    "profile": "local-unsigned-development",
+    "keyId": "urn:fenrua:key:local-unsigned-development",
+    "payloadDigest": {
+      "algorithm": "sha-256",
+      "value": "7f017dcd1503e3f443e351b47985de0dd238f3b2ce688ea71436492db46e979e"
+    }
+  }
+}
